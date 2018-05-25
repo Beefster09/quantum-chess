@@ -1,4 +1,6 @@
 
+@hover-highlight: #4fc3f7;
+
 @light-space: #cab17c;
 @dark-space: #8c7034;
 
@@ -8,6 +10,7 @@
   table-layout: fixed;
   border-width: 0px;
   border-collapse: collapse;
+  vertical-align: middle;
 
   td, th {
     padding: 0px;
@@ -18,9 +21,15 @@
   .board-space {
     &.light {
       background-color: @light-space;
+      &:hover {
+        background-color: mix(@hover-highlight, @light-space, 35%);
+      }
     }
     &.dark {
       background-color: @dark-space;
+      &:hover {
+        background-color: mix(@hover-highlight, @dark-space, 35%);
+      }
     }
     .square {
       width: @square-size;
@@ -32,7 +41,6 @@
     font-size: @square-size * 0.3;
     font-family: sans-serif;
     text-align: center;
-    vertical-align: middle;
 
     &.file {
       width: @square-size;
@@ -42,6 +50,40 @@
     &.rank {
       height: @square-size;
       width: @square-size * 0.4;
+    }
+  }
+}
+
+// Sprites
+
+@piece-size: 45px;
+@black:  -@piece-size;
+@king:   0;
+@queen:  -1 * @piece-size;
+@bishop: -2 * @piece-size;
+@knight: -3 * @piece-size;
+@rook:   -4 * @piece-size;
+@pawn:   -5 * @piece-size;
+
+g {
+  display: none;
+}
+
+g:target {
+  display: inline;
+}
+
+.piece {
+  width: @piece-size;
+  height: @piece-size;
+  margin: auto;
+  background: transparent url(assets/pieces.svg) stretch;
+  // background-size: 45 45;
+
+  &.knight {
+    &.black {
+      background-image: url(assets/pieces.svg#black-knight);
+      background-position: @knight @black;
     }
   }
 }
