@@ -1,0 +1,132 @@
+<html>
+  <head>
+    <title>Quantum Chess</title>
+    <link rel="stylesheet" type="text/css" href="styles.css" />
+  </head>
+  <body>
+    <div>
+      <table class="board">
+        <tr>
+          <td></td>
+          <th class="board-header file">a</th>
+          <th class="board-header file">b</th>
+          <th class="board-header file">c</th>
+          <th class="board-header file">d</th>
+          <th class="board-header file">e</th>
+          <th class="board-header file">f</th>
+          <th class="board-header file">g</th>
+          <th class="board-header file">h</th>
+          <td></td>
+          <tr>
+            <tr>
+              <th class="board-header rank">8</th>
+              <td id="space-a8" class="board-space light square"></td>
+              <td id="space-b8" class="board-space dark square"></td>
+              <td id="space-c8" class="board-space light square"></td>
+              <td id="space-d8" class="board-space dark square"></td>
+              <td id="space-e8" class="board-space light square"></td>
+              <td id="space-f8" class="board-space dark square"></td>
+              <td id="space-g8" class="board-space light square"></td>
+              <td id="space-h8" class="board-space dark square"></td>
+              <th class="board-header rank">8</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">7</th>
+              <td id="space-a7" class="board-space dark square"></td>
+              <td id="space-b7" class="board-space light square"></td>
+              <td id="space-c7" class="board-space dark square"></td>
+              <td id="space-d7" class="board-space light square"></td>
+              <td id="space-e7" class="board-space dark square"></td>
+              <td id="space-f7" class="board-space light square"></td>
+              <td id="space-g7" class="board-space dark square"></td>
+              <td id="space-h7" class="board-space light square"></td>
+              <th class="board-header rank">7</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">6</th>
+              <td id="space-a6" class="board-space light square"></td>
+              <td id="space-b6" class="board-space dark square"></td>
+              <td id="space-c6" class="board-space light square"></td>
+              <td id="space-d6" class="board-space dark square"></td>
+              <td id="space-e6" class="board-space light square"></td>
+              <td id="space-f6" class="board-space dark square"></td>
+              <td id="space-g6" class="board-space light square"></td>
+              <td id="space-h6" class="board-space dark square"></td>
+              <th class="board-header rank">6</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">5</th>
+              <td id="space-a5" class="board-space dark square"></td>
+              <td id="space-b5" class="board-space light square"></td>
+              <td id="space-c5" class="board-space dark square"></td>
+              <td id="space-d5" class="board-space light square"></td>
+              <td id="space-e5" class="board-space dark square"></td>
+              <td id="space-f5" class="board-space light square"></td>
+              <td id="space-g5" class="board-space dark square"></td>
+              <td id="space-h5" class="board-space light square"></td>
+              <th class="board-header rank">5</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">4</th>
+              <td id="space-a4" class="board-space light square"></td>
+              <td id="space-b4" class="board-space dark square"></td>
+              <td id="space-c4" class="board-space light square"></td>
+              <td id="space-d4" class="board-space dark square"></td>
+              <td id="space-e4" class="board-space light square"></td>
+              <td id="space-f4" class="board-space dark square"></td>
+              <td id="space-g4" class="board-space light square"></td>
+              <td id="space-h4" class="board-space dark square"></td>
+              <th class="board-header rank">4</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">3</th>
+              <td id="space-a3" class="board-space dark square"></td>
+              <td id="space-b3" class="board-space light square"></td>
+              <td id="space-c3" class="board-space dark square"></td>
+              <td id="space-d3" class="board-space light square"></td>
+              <td id="space-e3" class="board-space dark square"></td>
+              <td id="space-f3" class="board-space light square"></td>
+              <td id="space-g3" class="board-space dark square"></td>
+              <td id="space-h3" class="board-space light square"></td>
+              <th class="board-header rank">3</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">2</th>
+              <td id="space-a2" class="board-space light square"></td>
+              <td id="space-b2" class="board-space dark square"></td>
+              <td id="space-c2" class="board-space light square"></td>
+              <td id="space-d2" class="board-space dark square"></td>
+              <td id="space-e2" class="board-space light square"></td>
+              <td id="space-f2" class="board-space dark square"></td>
+              <td id="space-g2" class="board-space light square"></td>
+              <td id="space-h2" class="board-space dark square"></td>
+              <th class="board-header rank">2</th>
+            </tr>
+            <tr>
+              <th class="board-header rank">1</th>
+              <td id="space-a1" class="board-space dark square"></td>
+              <td id="space-b1" class="board-space light square"></td>
+              <td id="space-c1" class="board-space dark square"></td>
+              <td id="space-d1" class="board-space light square"></td>
+              <td id="space-e1" class="board-space dark square"></td>
+              <td id="space-f1" class="board-space light square"></td>
+              <td id="space-g1" class="board-space dark square"></td>
+              <td id="space-h1" class="board-space light square"></td>
+              <th class="board-header rank">1</th>
+            </tr>
+            <tr>
+              <td></td>
+              <th class="board-header file">a</th>
+              <th class="board-header file">b</th>
+              <th class="board-header file">c</th>
+              <th class="board-header file">d</th>
+              <th class="board-header file">e</th>
+              <th class="board-header file">f</th>
+              <th class="board-header file">g</th>
+              <th class="board-header file">h</th>
+              <td></td>
+              <tr>
+              </table>
+    </div>
+  </body>
+</html>

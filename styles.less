@@ -1,0 +1,47 @@
+
+@light-space: #cab17c;
+@dark-space: #8c7034;
+
+@square-size: 80px;
+
+.board {
+  table-layout: fixed;
+  border-width: 0px;
+  border-collapse: collapse;
+
+  td, th {
+    padding: 0px;
+    margin: 0px;
+    border-width: 0px;
+  }
+
+  .board-space {
+    &.light {
+      background-color: @light-space;
+    }
+    &.dark {
+      background-color: @dark-space;
+    }
+    .square {
+      width: @square-size;
+      height: @square-size;
+    }
+  }
+
+  .board-header {
+    font-size: @square-size * 0.3;
+    font-family: sans-serif;
+    text-align: center;
+    vertical-align: middle;
+
+    &.file {
+      width: @square-size;
+      height: @square-size * 0.4;
+    }
+
+    &.rank {
+      height: @square-size;
+      width: @square-size * 0.4;
+    }
+  }
+}
