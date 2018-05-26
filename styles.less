@@ -8,12 +8,22 @@
 
 @square-size: 80px;
 
+.no-select {
+  -webkit-user-select:none;
+  -khtml-user-drag:none;
+  -khtml-user-select:none;
+  -moz-user-select:none;
+  -moz-user-select:-moz-none;
+  -ms-user-select:none;
+  user-select:none;
+}
+
 .board {
+  .no-select;
   cursor: default;
   table-layout: fixed;
   border-width: 0px;
   border-collapse: collapse;
-  // vertical-align: middle;
 
   td, th {
     padding: 0px;
@@ -38,6 +48,7 @@
     &.square {
       width: @square-size;
       height: @square-size;
+      overflow: hidden;
     }
   }
 
@@ -63,12 +74,22 @@
 @piece-url: "assets/pieces.svg";
 
 .piece {
+  position: relative;
   width: @square-size;
   height: @square-size;
   margin: auto;
   background-repeat: no-repeat;
   background-size: cover;
   font-size: 0;
+  cursor: grab;
+
+  &:hover {
+    filter: invert(25%) sepia() saturate(500%) hue-rotate(170deg);
+  }
+
+  &.threatened {
+    filter: invert(25%) sepia() saturate(500%) hue-rotate(-45deg);
+  }
 
   @piece-types: king, queen, bishop, knight, rook, pawn;
   .loop(@t) when (@t > 0) {
