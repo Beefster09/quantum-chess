@@ -4,13 +4,16 @@
 @light-space: #cab17c;
 @dark-space: #8c7034;
 
+@quantum-label: #f44336;
+
 @square-size: 80px;
 
 .board {
+  cursor: default;
   table-layout: fixed;
   border-width: 0px;
   border-collapse: collapse;
-  vertical-align: middle;
+  // vertical-align: middle;
 
   td, th {
     padding: 0px;
@@ -19,6 +22,7 @@
   }
 
   .board-space {
+    vertical-align: top;
     &.light {
       background-color: @light-space;
       &:hover {
@@ -31,7 +35,7 @@
         background-color: mix(@hover-highlight, @dark-space, 35%);
       }
     }
-    .square {
+    &.square {
       width: @square-size;
       height: @square-size;
     }
@@ -56,34 +60,45 @@
 
 // Sprites
 
-@piece-size: 45px;
-@black:  -@piece-size;
-@king:   0;
-@queen:  -1 * @piece-size;
-@bishop: -2 * @piece-size;
-@knight: -3 * @piece-size;
-@rook:   -4 * @piece-size;
-@pawn:   -5 * @piece-size;
-
-g {
-  display: none;
-}
-
-g:target {
-  display: inline;
-}
+@piece-url: "assets/pieces.svg";
 
 .piece {
-  width: @piece-size;
-  height: @piece-size;
+  width: @square-size;
+  height: @square-size;
   margin: auto;
-  background: transparent url(assets/pieces.svg) stretch;
-  // background-size: 45 45;
+  background-repeat: no-repeat;
+  background-size: cover;
+  font-size: 0;
 
-  &.knight {
-    &.black {
-      background-image: url(assets/pieces.svg#black-knight);
-      background-position: @knight @black;
+  @piece-types: king, queen, bishop, knight, rook, pawn;
+  .loop(@t) when (@t > 0) {
+    .loop((@t - 1));
+    @type: extract(@piece-types, @t);
+
+    &.@{type}{
+      &.white {
+        background-image: url("@{piece-url}#white-@{type}");
+      }
+      &.black {
+        background-image: url("@{piece-url}#black-@{type}");
+      }
     }
+  }
+  .loop(length(@piece-types));
+
+  &.quantum {
+    @size: @square-size / 2;
+    @text-size: @square-size / 3.5;
+    width: @size;
+    height: @size;
+    margin: 0px;
+    display: inline-block;
+    vertical-align: bottom;
+    line-height: @size + @text-size;
+    text-align: right;
+    font-family: monospace;
+    font-size: @text-size;
+    text-shadow: 0 0 3px darken(@quantum-label, 20%), 0 0 5px darken(@quantum-label, 50%);
+    color: @quantum-label;
   }
 }
