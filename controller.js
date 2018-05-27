@@ -126,10 +126,8 @@ Piece = function() {
       // hMoves are hypothetical moves that occur beforehand
       let space = getSpace(location);
       if (!space || space.children.length === 0) {
-        let [r1, f1] = toSpace(location);
         for (let [pieceToMove, destination] of hMoves) {
-          let [r2, f2] = toSpace(destination);
-          if (r1 === r2 && f1 === f2) {
+          if (sameLocation(location, destination)) {
             return pieceToMove;
           }
         }
@@ -357,14 +355,13 @@ class King extends Piece {
 
     // Castling
     if (!this.hasMoved && rank === curRank) {
-      // TODO: check that the inbetween space is not threatened
-      if (file === curFile + 2 && !isInCheck(this.color)) {
+      if (file === curFile + 2 && !isInCheck(this.color) && !wouldBeCheck(this.color, this, [rank, curFile + 1])) {
         let maybeRook = Piece.at([rank, 7]);
         if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
           return !Piece.at([rank, 5]) && !Piece.at([rank, 6]);
         }
       }
-      else if (file === curFile - 2 && !isInCheck(this.color)) {
+      else if (file === curFile - 2 && !isInCheck(this.color) && !wouldBeCheck(this.color, this, [rank, curFile - 1])) {
         let maybeRook = Piece.at([rank, 0]);
         if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
           return !Piece.at([rank, 1]) && !Piece.at([rank, 2]) && !Piece.at([rank, 3]);
@@ -487,7 +484,7 @@ class Pawn extends Piece {
 
     if (file === curFile) {
       if (!this.hasMoved && rank === curRank + 2 * dir) {
-        return !Piece.at(location) && !Piece.at([rank - 1, file]);
+        return !Piece.at(location) && !Piece.at([curRank + dir, file]);
       }
       return rank === curRank + dir && !Piece.at(location);
     }
@@ -568,7 +565,7 @@ function initialize() {
         let desiredLocation = dropLocation.id;
         if (heldPiece.isLegalMove(desiredLocation)) {
           heldPiece.moveTo(desiredLocation);
-          heldPiece.highlightLegalMoves(); // TEMP: will switch whose turn it is.
+          heldPiece.highlightLegalMoves();
         }
       }
     }
