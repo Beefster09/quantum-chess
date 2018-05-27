@@ -34,3 +34,7 @@ function toAlgebraic(location) {
     return spaceToAlgebraic(location);
   }
 }
+
+function otherColor(color) {
+  return color == 'white'? 'black' : 'white';
+}

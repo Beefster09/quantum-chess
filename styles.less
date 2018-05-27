@@ -97,17 +97,17 @@
   margin: auto;
   background-repeat: no-repeat;
   background-size: cover;
-  font-size: 0;
-  cursor: grab;
 
-  &:hover {
-    // filter: invert(25%) sepia() saturate(500%) hue-rotate(170deg);
+  &:hover:not(.captured) {
     filter: url("assets/filters.svg#blue-glow");
   }
 
   &.threatened {
-    // filter: invert(25%) sepia() saturate(500%) hue-rotate(-45deg);
     filter: url("assets/filters.svg#red-glow");
+  }
+
+  &.protected {
+    filter: url("assets/filters.svg#yellow-glow");
   }
 
   @piece-types: king, queen, bishop, knight, rook, pawn;
@@ -141,4 +141,36 @@
     text-shadow: 0 0 3px darken(@quantum-label, 20%), 0 0 5px darken(@quantum-label, 50%);
     color: @quantum-label;
   }
+}
+
+.graveyard {
+  border: 1px solid black;
+  width: @square-size * 2.5;
+  height: @square-size * 2;
+  display: flex;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
+
+  .piece {
+    @size: @square-size / 2;
+    width: @size;
+    height: @size;
+    margin: 0;
+  }
+}
+
+.flex-horiz {
+  display: flex;
+  flex-direction: row;
+}
+
+.flex-vert {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-spacer {
+  flex-grow: 1;
 }
