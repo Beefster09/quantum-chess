@@ -53,7 +53,7 @@ function getSpaceFromPoint(x, y) {
 function isInCheck(color) {
   let king = armies[color][0];
   for (let piece of armies[otherColor(color)]) {
-    if (piece.alive && piece.isLegalMove(king.location)) {
+    if (piece.alive && piece.canMove(king.location)) {
       return true;
     }
   }
@@ -63,8 +63,18 @@ function isInCheck(color) {
 function wouldBeCheck(color, pieceToMove, destination) {
   let king = armies[color][0];
   for (let piece of armies[otherColor(color)]) {
-    if (piece.alive && piece.isLegalMove(king.location, [pieceToMove, destination])) {
-      return true;
+    if (piece.alive) {
+      if (sameLocation(piece.location, destination) && pieceToMove.canMove(destination)) {
+        continue; // There might still be another piece keeping you in check
+      }
+      else if (pieceToMove === king) {
+        if (piece.canMove(destination)) {
+          return true;
+        }
+      }
+      else if (piece.canMove(king.location, [pieceToMove, destination])) {
+        return true;
+      }
     }
   }
   return false;
@@ -72,12 +82,15 @@ function wouldBeCheck(color, pieceToMove, destination) {
 
 function isCheckmate(color) {
   let king = armies[color][0];
-  for (let piece of armies[color]) {
-    if (piece.alive && piece.hasLegalMove()) {
-      return false;
+  if (isInCheck) {
+    for (let piece of armies[color]) {
+      if (piece.alive && piece.hasLegalMove()) {
+        return false;
+      }
     }
+    return true;
   }
-  return true;
+  else return false;
 }
 
 Piece = function() {
@@ -186,11 +199,16 @@ Piece = function() {
         if (switchTurn) {
           turn = otherColor(this.color);
           turnIndicator.className = turn;
-          if (isInCheck(turn)) {
-            window.alert("Check!");
-          }
         }
         this.render();
+        if (isInCheck(turn)) {
+          if (isCheckmate(turn)) {
+            window.alert("Checkmate!"); // TEMP
+          }
+          else {
+            window.alert("Check!"); // TEMP
+          }
+        }
       }
     }
 
@@ -206,7 +224,7 @@ Piece = function() {
       return false;
     }
 
-    isLegalMove(location, ...hMoves) {
+    isLegalMove(location) {
       let [rank, file] = toSpace(location);
       let [curRank, curFile] = this.location;
 
@@ -214,11 +232,22 @@ Piece = function() {
         return false;
       }
 
-      let result = this.canMove(location, ...hMoves);
-      if (result && wouldBeCheck(this.color, this, location)) {
+      let result = this.canMove(location);
+      if (result !== false && wouldBeCheck(this.color, this, location)) {
         return false;
       }
       return result;
+    }
+
+    hasLegalMove() {
+      for (let rank = 0; rank < 8; rank++) {
+        for (let file = 0; file < 8; file++) {
+          if (this.isLegalMove([rank, file])) {
+            return true;
+          }
+        }
+      }
+      return false;
     }
 
     highlightLegalMoves() {
@@ -397,7 +426,7 @@ class Bishop extends Piece {
     this.type = 'bishop';
   }
 
-  isLegalMove(location, ...hMoves) {
+  canMove(location, ...hMoves) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 

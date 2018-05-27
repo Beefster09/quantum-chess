@@ -38,3 +38,9 @@ function toAlgebraic(location) {
 function otherColor(color) {
   return color == 'white'? 'black' : 'white';
 }
+
+function sameLocation(l1, l2) {
+  let [r1, f1] = toSpace(l1);
+  let [r2, f2] = toSpace(l2);
+  return r1 === r2 && f1 === f2;
+}
