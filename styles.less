@@ -1,5 +1,10 @@
 
-@hover-highlight: #4fc3f7;
+
+@move-highlight: #2a7bde;
+@hover-highlight: #4fa3f7;
+@drop-highlight: #ffeb3b;
+@threaten-highlight: #f44336;
+@highlight-alpha: 35%;
 
 @light-space: #cab17c;
 @dark-space: #8c7034;
@@ -33,17 +38,29 @@
 
   .board-space {
     vertical-align: top;
-    &.light {
-      background-color: @light-space;
-      &:hover {
-        background-color: mix(@hover-highlight, @light-space, 35%);
+    .mixin--board-space(@base-color) {
+      background-color: @base-color;
+      .mixin--highlight(@highlight) {
+        background-color: mix(@highlight, @base-color, @highlight-alpha);
+      }
+      &:hover:empty {
+        .mixin--highlight(@hover-highlight);
+      }
+      &.legal-move {
+        .mixin--highlight(@move-highlight);
+      }
+      &.threatened {
+        .mixin--highlight(@threaten-highlight);
+      }
+      &.drop {
+        .mixin--highlight(@drop-highlight) !important;
       }
     }
+    &.light {
+      .mixin--board-space(@light-space);
+    }
     &.dark {
-      background-color: @dark-space;
-      &:hover {
-        background-color: mix(@hover-highlight, @dark-space, 35%);
-      }
+      .mixin--board-space(@dark-space);
     }
     &.square {
       width: @square-size;
@@ -84,11 +101,13 @@
   cursor: grab;
 
   &:hover {
-    filter: invert(25%) sepia() saturate(500%) hue-rotate(170deg);
+    // filter: invert(25%) sepia() saturate(500%) hue-rotate(170deg);
+    filter: url("assets/filters.svg#blue-glow");
   }
 
   &.threatened {
-    filter: invert(25%) sepia() saturate(500%) hue-rotate(-45deg);
+    // filter: invert(25%) sepia() saturate(500%) hue-rotate(-45deg);
+    filter: url("assets/filters.svg#red-glow");
   }
 
   @piece-types: king, queen, bishop, knight, rook, pawn;

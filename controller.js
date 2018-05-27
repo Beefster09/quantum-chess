@@ -1,12 +1,28 @@
 const WHITE = 'white';
 const BLACK = 'black';
 
+var hoveredPiece = null;
+var heldPiece = null;
+
+function unhighlight(space) {
+  space.classList.remove('legal-move', 'threatened');
+}
+
+function unhighlightBoard() {
+  for (let space of document.getElementsByClassName('board-space')) {
+    unhighlight(space);
+  }
+}
+
 class Piece {
   constructor(color, position) {
+    this.game = null;
     this.color = color;
-    this.position = position;
+    this.isQuantum = false;
+    this.position = toSpace(position);
     this.type = null;
     this.pieceNode = null;
+    this.hasMoved = false;
   }
 
   initPiece() {
@@ -21,20 +37,38 @@ class Piece {
       piece.style['left'] = event.x;
       piece.style['top'] = event.y;
       piece.style['transform'] = 'translate(-50%, -50%)';
+      piece.style['z-index'] = 10;
       dragging = true;
       event.preventDefault();
     });
+    piece.addEventListener('mouseenter', function(event) {
+      hoveredPiece = self;
+      self.highlightLegalMoves();
+    })
+    piece.addEventListener('mouseleave', function(event) {
+      if (hoveredPiece === self) {
+        unhighlightBoard();
+      }
+    })
+    // TODO: globally scope this one
     document.addEventListener('mouseup', function(event) {
       piece.removeAttribute('style');
       if (dragging) {
         let dropLocation = document.elementFromPoint(event.x, event.y);
-        if (dropLocation && Array.prototype.includes.call(dropLocation.classList, 'board-space')) {
-          self.position = dropLocation.id.split('-')[1];
-          self.render();
+        if (dropLocation) {
+          let isEmpty = Array.prototype.includes.call(dropLocation.classList, 'board-space'); // TEMP
+          if (isEmpty) {
+            let desiredLocation = algebraicToSpace(dropLocation.id);
+            if (self.isLegalMove(desiredLocation)) {
+              self.moveTo(desiredLocation);
+              self.highlightLegalMoves(); // TEMP: will switch whose turn it is.
+            }
+          }
         }
       }
       dragging = false;
     });
+    // TODO: globally scope this so that there aren't a jillion listeners
     document.addEventListener('mousemove', function(event) {
       if (dragging) {
         piece.style['left'] = event.clientX;
@@ -43,9 +77,30 @@ class Piece {
     })
   }
 
+  moveTo(location) {
+    this.position = location;
+    this.hasMoved = true;
+    this.render();
+  }
+
+  isLegalMove(location) {
+    return false;
+  }
+
+  highlightLegalMoves() {
+    for (let space of document.getElementsByClassName('board-space')) {
+      if (this.isLegalMove(space.id)) {
+        space.classList.add('legal-move');
+      }
+      else {
+        unhighlight(space);
+      }
+    }
+  }
+
   render() {
-    if (isString(this.position)) {
-      let space = document.getElementById(`space-${this.position}`);
+    if (!this.isQuantum) {
+      let space = document.getElementById(spaceToAlgebraic(this.position));
       if (!this.pieceNode) {
         this.initPiece();
       }
@@ -58,6 +113,20 @@ class King extends Piece {
   constructor(color, position) {
     super(color, position);
     this.type = 'king';
+  }
+
+  isLegalMove(location) {
+    let [rank, file] = toSpace(location);
+    let [curRank, curFile] = this.position;
+
+    if (rank === curRank && file === curFile) {
+      return false;
+    }
+
+    return (
+      rank <= curRank + 1 && rank >= curRank - 1
+      && file <= curFile + 1 && file >= curFile - 1
+    );
   }
 }
 
@@ -93,6 +162,23 @@ class Pawn extends Piece {
   constructor(color, position) {
     super(color, position);
     this.type = 'pawn';
+  }
+
+  isLegalMove(location) {
+    let [rank, file] = toSpace(location);
+    let [curRank, curFile] = this.position;
+
+    let dir = this.color === 'white'? 1 : -1;
+
+    if (file === curFile) {
+      if (!this.hasMoved && rank === curRank + 2 * dir) {
+        return true; // TODO: check if space is occupied
+      }
+      return rank === curRank + dir;
+    }
+    else {
+      return false; // TODO: check if capturing
+    }
   }
 }
 
