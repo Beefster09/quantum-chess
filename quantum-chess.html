@@ -133,8 +133,11 @@
     </div>
     <div class="flex-vert">
       <div id="dead-white" class="graveyard"></div>
-      <div class="flex-spacer">
-        <p><span id="turn-indicator">White</span> to move</p>
+      <div class="flex-spacer flex-vert">
+        <div id="turn-indicator-container" class="flex-horiz">
+          <div>Current Player:</div>
+          <div id="turn-indicator" class="white"></div>
+        </div>
       </div>
       <div id="dead-black" class="graveyard"></div>
     </div>

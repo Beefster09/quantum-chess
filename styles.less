@@ -13,6 +13,20 @@
 
 @square-size: 80px;
 
+.flex-horiz {
+  display: flex;
+  flex-direction: row;
+}
+
+.flex-vert {
+  display: flex;
+  flex-direction: column;
+}
+
+.flex-spacer {
+  flex-grow: 1;
+}
+
 .no-select {
   -webkit-user-select:none;
   -khtml-user-drag:none;
@@ -86,10 +100,6 @@
   }
 }
 
-// Sprites
-
-@piece-url: "assets/pieces.svg";
-
 .piece {
   position: relative;
   width: @square-size;
@@ -117,10 +127,10 @@
 
     &.@{type}{
       &.white {
-        background-image: url("@{piece-url}#white-@{type}");
+        background-image: url("assets/pieces.svg#white-@{type}");
       }
       &.black {
-        background-image: url("@{piece-url}#black-@{type}");
+        background-image: url("assets/pieces.svg#black-@{type}");
       }
     }
   }
@@ -161,16 +171,29 @@
   }
 }
 
-.flex-horiz {
-  display: flex;
-  flex-direction: row;
+#turn-indicator-container {
+  height: @square-size;
+  align-items: center;
+  justify-content: center;
+  font-family: sans-serif;
+  font-size: @square-size / 5;
 }
 
-.flex-vert {
+#turn-indicator {
+  @size: @square-size * 0.7;
+  width: @size;
+  height: @size;
   display: flex;
-  flex-direction: column;
-}
+  justify-content: center;
+  align-items: center;
+  background-repeat: no-repeat;
+  background-size: cover;
+  font-size: 0;
 
-.flex-spacer {
-  flex-grow: 1;
+  &.white {
+    background-image: url("assets/pieces.svg#white-king");
+  }
+  &.black {
+    background-image: url("assets/pieces.svg#black-king");
+  }
 }

@@ -2,9 +2,21 @@ const WHITE = 'white';
 const BLACK = 'black';
 const PROTECT = ''; // Falsy sentinel value to mark protected piece
 
+const LMB = 0;
+const RMB = 2;
+const MMB = 1;
+
+// Quantum states
+const ALPHA = 0;
+const BETA = 1;
+
 var hoveredPiece = null;
 var heldPiece = null;
-var game = null;
+
+var armies = {
+  white: null,
+  black: null
+};
 
 var turn = 'white';
 
@@ -38,6 +50,36 @@ function getSpaceFromPoint(x, y) {
   return null;
 }
 
+function isInCheck(color) {
+  let king = armies[color][0];
+  for (let piece of armies[otherColor(color)]) {
+    if (piece.alive && piece.isLegalMove(king.location)) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function wouldBeCheck(color, pieceToMove, destination) {
+  let king = armies[color][0];
+  for (let piece of armies[otherColor(color)]) {
+    if (piece.alive && piece.isLegalMove(king.location, [pieceToMove, destination])) {
+      return true;
+    }
+  }
+  return false;
+}
+
+function isCheckmate(color) {
+  let king = armies[color][0];
+  for (let piece of armies[color]) {
+    if (piece.alive && piece.hasLegalMove()) {
+      return false;
+    }
+  }
+  return true;
+}
+
 Piece = function() {
   var nextId = function () {
     let idx = 0;
@@ -54,23 +96,40 @@ Piece = function() {
       piecesByIds[this.id] = this;
       this.color = color;
       this.isQuantum = false;
+      this.canQuantum = true;
       this.location = toSpace(position);
       this.type = null;
       this.element = null;
+      this.qElements = null;
       this.hasMoved = false;
+      this.alive = true;
     }
 
     static byId(id) {
       return piecesByIds[id];
     }
 
-    static at(location) {
+    static at(location, ...hMoves) {
+      // hMoves are hypothetical moves that occur beforehand
       let space = getSpace(location);
       if (!space || space.children.length === 0) {
+        let [r1, f1] = toSpace(location);
+        for (let [pieceToMove, destination] of hMoves) {
+          let [r2, f2] = toSpace(destination);
+          if (r1 === r2 && f1 === f2) {
+            return pieceToMove;
+          }
+        }
         return null;
       }
       else if (space.children.length === 1) {
-        return Piece.byId(space.firstChild.id);
+        let piece = Piece.byId(space.firstChild.id);
+        for (let [pieceToMove, destination] of hMoves) {
+          if (piece === pieceToMove) {
+            return null;
+          }
+        }
+        return piece;
       }
     }
 
@@ -82,13 +141,18 @@ Piece = function() {
       let self = this;
       let piece = this.element;
       piece.addEventListener('mousedown', function(event) {
-        piece.style['position'] = 'absolute';
-        piece.style['left'] = event.x;
-        piece.style['top'] = event.y;
-        piece.style['transform'] = 'translate(-50%, -50%)';
-        piece.style['z-index'] = 10;
-        heldPiece = self;
-        event.preventDefault();
+        if (event.button === LMB) {
+          piece.style['position'] = 'absolute';
+          piece.style['left'] = event.x;
+          piece.style['top'] = event.y;
+          piece.style['transform'] = 'translate(-50%, -50%)';
+          piece.style['z-index'] = 10;
+          heldPiece = self;
+          event.preventDefault();
+        }
+        if (event.button === RMB) {
+          // TODO: split piece
+        }
       });
       piece.addEventListener('mouseenter', function(event) {
         hoveredPiece = self;
@@ -99,13 +163,19 @@ Piece = function() {
           unhighlightBoard();
         }
       });
+      piece.addEventListener('contextmenu', function(event) {
+        event.preventDefault();
+      });
     }
 
     isCapOrGuard(other) {
       return other.color !== this.color? true : PROTECT;
     }
 
-    moveTo(location) {
+    moveTo(location, switchTurn) {
+      if (switchTurn === undefined) {
+        switchTurn = true;
+      }
       if (this.color === turn) {
         let other = Piece.at(location);
         if (other) {
@@ -113,8 +183,13 @@ Piece = function() {
         }
         this.location = toSpace(location);
         this.hasMoved = true;
-        turn = otherColor(this.color);
-        turnIndicator.innerHTML = turn;
+        if (switchTurn) {
+          turn = otherColor(this.color);
+          turnIndicator.className = turn;
+          if (isInCheck(turn)) {
+            window.alert("Check!");
+          }
+        }
         this.render();
       }
     }
@@ -124,10 +199,26 @@ Piece = function() {
       this.location = null;
       this.element.classList.add('captured')
       dead[this.color].append(this.element);
+      this.alive = false;
     }
 
-    isLegalMove(location) {
+    canMove(location) {
       return false;
+    }
+
+    isLegalMove(location, ...hMoves) {
+      let [rank, file] = toSpace(location);
+      let [curRank, curFile] = this.location;
+
+      if (rank === curRank && file === curFile) {
+        return false;
+      }
+
+      let result = this.canMove(location, ...hMoves);
+      if (result && wouldBeCheck(this.color, this, location)) {
+        return false;
+      }
+      return result;
     }
 
     highlightLegalMoves() {
@@ -168,7 +259,7 @@ Piece = function() {
   return Piece;
 }();
 
-function canRideToOrtho(piece, [rank, file]) {
+function canRideToOrtho(piece, [rank, file], ...hMoves) {
   let [curRank, curFile] = piece.location;
 
   if (rank == curRank) {
@@ -178,7 +269,7 @@ function canRideToOrtho(piece, [rank, file]) {
       let f = curFile + dir * offset;
       if (Piece.at([rank, f])) return false;
     }
-    let other = Piece.at([rank, file]);
+    let other = Piece.at([rank, file], ...hMoves);
     if (other) {
       return piece.isCapOrGuard(other);
     }
@@ -191,7 +282,7 @@ function canRideToOrtho(piece, [rank, file]) {
       let r = curRank + dir * offset;
       if (Piece.at([r, file])) return false;
     }
-    let other = Piece.at([rank, file]);
+    let other = Piece.at([rank, file], ...hMoves);
     if (other) {
       return piece.isCapOrGuard(other);
     }
@@ -200,7 +291,7 @@ function canRideToOrtho(piece, [rank, file]) {
   else return false;
 }
 
-function canRideToDiag(piece, [rank, file]) {
+function canRideToDiag(piece, [rank, file], ...hMoves) {
   let [curRank, curFile] = piece.location;
 
   let rankDiff = rank - curRank;
@@ -213,9 +304,9 @@ function canRideToDiag(piece, [rank, file]) {
     for (let offset = 1; offset < diff; offset++) {
       let f = curFile + fileDir * offset;
       let r = curRank + rankDir * offset;
-      if (Piece.at([r, f])) return false;
+      if (Piece.at([r, f], ...hMoves)) return false;
     }
-    let other = Piece.at([rank, file]);
+    let other = Piece.at([rank, file], ...hMoves);
     if (other) {
       return piece.isCapOrGuard(other);
     }
@@ -228,16 +319,29 @@ class King extends Piece {
   constructor(color, position) {
     super(color, position);
     this.type = 'king';
+    this.canQuantum = false;
   }
 
-  isLegalMove(location) {
+  canMove(location) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
-    if (rank === curRank && file === curFile) {
-      return false;
+    // Castling
+    if (!this.hasMoved && rank === curRank) {
+      // TODO: check that the inbetween space is not threatened
+      if (file === curFile + 2 && !isInCheck(this.color)) {
+        let maybeRook = Piece.at([rank, 7]);
+        if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
+          return !Piece.at([rank, 5]) && !Piece.at([rank, 6]);
+        }
+      }
+      else if (file === curFile - 2 && !isInCheck(this.color)) {
+        let maybeRook = Piece.at([rank, 0]);
+        if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
+          return !Piece.at([rank, 1]) && !Piece.at([rank, 2]) && !Piece.at([rank, 3]);
+        }
+      }
     }
-
     if (
       rank <= curRank + 1 && rank >= curRank - 1
       && file <= curFile + 1 && file >= curFile - 1
@@ -250,6 +354,25 @@ class King extends Piece {
     }
     else return false;
   }
+
+  moveTo(location, switchTurn) {
+    let [rank, file] = toSpace(location);
+    let [curRank, curFile] = this.location;
+
+    if (file === curFile + 2) {
+      let maybeRook = Piece.at([rank, 7]);
+      if (maybeRook && maybeRook.type === 'rook') {
+        maybeRook.moveTo([rank, 5], false);
+      }
+    }
+    else if (file === curFile - 2) {
+      let maybeRook = Piece.at([rank, 0]);
+      if (maybeRook && maybeRook.type === 'rook') {
+        maybeRook.moveTo([rank, 3], false);
+      }
+    }
+    super.moveTo(location, switchTurn);
+  }
 }
 
 class Queen extends Piece {
@@ -258,17 +381,13 @@ class Queen extends Piece {
     this.type = 'queen';
   }
 
-  isLegalMove(location) {
+  canMove(location, ...hMoves) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
-    if (rank === curRank && file === curFile) {
-      return false;
-    }
-
-    let ortho = canRideToOrtho(this, [rank, file]);
+    let ortho = canRideToOrtho(this, [rank, file], ...hMoves);
     if (ortho !== false) return ortho;
-    return canRideToDiag(this, [rank, file]);
+    return canRideToDiag(this, [rank, file], ...hMoves);
   }
 }
 
@@ -278,15 +397,11 @@ class Bishop extends Piece {
     this.type = 'bishop';
   }
 
-  isLegalMove(location) {
+  isLegalMove(location, ...hMoves) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
-    if (rank === curRank && file === curFile) {
-      return false;
-    }
-
-    return canRideToDiag(this, [rank, file]);
+    return canRideToDiag(this, [rank, file], ...hMoves);
   }
 }
 
@@ -296,13 +411,9 @@ class Knight extends Piece {
     this.type = 'knight';
   }
 
-  isLegalMove(location) {
+  canMove(location) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
-
-    if (rank === curRank && file === curFile) {
-      return false;
-    }
 
     let rankDiff = Math.abs(rank - curRank);
     let fileDiff = Math.abs(file - curFile);
@@ -324,15 +435,11 @@ class Rook extends Piece {
     this.type = 'rook';
   }
 
-  isLegalMove(location) {
+  canMove(location, ...hMoves) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
-    if (rank === curRank && file === curFile) {
-      return false;
-    }
-
-    return canRideToOrtho(this, [rank, file]);
+    return canRideToOrtho(this, [rank, file], ...hMoves);
   }
 }
 
@@ -340,9 +447,10 @@ class Pawn extends Piece {
   constructor(color, position) {
     super(color, position);
     this.type = 'pawn';
+    this.canQuantum = false;
   }
 
-  isLegalMove(location) {
+  canMove(location) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
@@ -355,6 +463,8 @@ class Pawn extends Piece {
       return rank === curRank + dir && !Piece.at(location);
     }
     else if (Math.abs(file - curFile) === 1) {
+      // TODO: en passant
+      // TODO: promotion
       let other = Piece.at(location);
       return rank === curRank + dir && other && this.isCapOrGuard(other);
     }
@@ -362,11 +472,10 @@ class Pawn extends Piece {
   }
 }
 
-class Board {
-  constructor() {
-    this.pieces = [
+function newGame() {
+  armies = {
+    white: [
       new King(WHITE, 'e1'),
-      new King(BLACK, 'e8'),
 
       new Rook(WHITE,   'a1'),
       new Knight(WHITE, 'b1'),
@@ -384,6 +493,9 @@ class Board {
       new Pawn(WHITE, 'f2'),
       new Pawn(WHITE, 'g2'),
       new Pawn(WHITE, 'h2'),
+    ],
+    black: [
+      new King(BLACK, 'e8'),
 
       new Pawn(BLACK, 'a7'),
       new Pawn(BLACK, 'b7'),
@@ -401,23 +513,17 @@ class Board {
       new Bishop(BLACK, 'f8'),
       new Knight(BLACK, 'g8'),
       new Rook(BLACK,   'h8'),
-    ];
+    ]
   }
-
-  render() {
-    let spaces = document.getElementsByClassName('board-space');
-    for(let element of spaces) {
-      element.innerHTML = '';
-    }
-    for(let piece of this.pieces) {
-      piece.render();
-    }
+  for(let element of document.getElementsByClassName('board-space')) {
+    element.innerHTML = '';
   }
-}
-
-function newGame() {
-  game = new Board();
-  game.render();
+  for(let piece of armies.white) {
+    piece.render();
+  }
+  for(let piece of armies.black) {
+    piece.render();
+  }
 }
 
 function initialize() {
