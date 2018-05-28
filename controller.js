@@ -32,6 +32,16 @@ var quantumMove = null;
 // ui elements
 var dead, turnIndicator, exiled;
 
+function startDrag(piece) {
+  let element = piece.element;
+  element.style['position'] = 'absolute';
+  element.style['left'] = event.x;
+  element.style['top'] = event.y;
+  element.style['transform'] = 'translate(-50%, -50%)';
+  element.style['z-index'] = 10;
+  heldPiece = piece;
+}
+
 function unhighlight(space) {
   space.classList.remove('legal-move', 'threatened');
   for (let piece of space.children) {
@@ -108,68 +118,6 @@ function setTurn(color) {
   quantumMove = null;
 }
 
-class Superstate {
-  constructor(piece) {
-    this.piece = piece;
-
-    // locations
-    this.locations = [piece.location, piece.location];
-    this.elements = null;
-    this.entanglements = [];
-  }
-
-  initPieces() {
-    this.elements = [];
-    let state = 'alpha'
-    let piece = this.piece;
-    for (let location of this.locations) {
-      let element = document.createElement('div');
-      element.id = `${piece.id}-${state}`;
-      element.classList.add('piece', piece.color, piece.type, 'quantum');
-      let label = document.createElement('div');
-      let intId = parseInt(piece.id.split('-').pop());
-      label.classList.add('quantum', 'label', state, 'pair-' + intId);
-      label.innerHTML = `${intId+1}${STATE_STRINGS[state]}`
-      element.appendChild(label);
-      this.elements.push(element);
-
-      let self = this;
-      element.addEventListener('mousedown', function() {
-        if (event.button === LMB) {
-          element.style['position'] = 'absolute';
-          element.style['left'] = event.x;
-          element.style['top'] = event.y;
-          element.style['transform'] = 'translate(-50%, -50%)';
-          element.style['z-index'] = 10;
-          heldPiece = { // TEMP: this should be some sort of sub object proxy-thing
-            element: element,
-            isLegalMove: () => false, // TEMP
-            moveTo: () => undefined,
-            highlightLegalMoves: () => undefined,
-          };
-          event.preventDefault();
-        }
-      });
-
-      state = 'beta';
-    }
-  }
-
-  collapse(which) {
-    // TODO
-  }
-
-  render() {
-    if (!this.elements) {
-      this.initPieces();
-    }
-    for (let i = 0; i < 2; i++) {
-      let space = document.getElementById(toAlgebraic(this.locations[i]));
-      space.append(this.elements[i]);
-    }
-  }
-}
-
 Piece = function() {
   var nextId = function () {
     let counts = {};
@@ -230,6 +178,34 @@ Piece = function() {
         }
         return piece;
       }
+      else {
+        let result = new Array(...space.children).map(function (child) {
+          let piece = Superstate.byId(child.id);
+          for (let [pieceToMove, destination] of hMoves) {
+            if (piece === pieceToMove) {
+              return null;
+            }
+          }
+          return piece;
+        }).filter(x => x !== null);
+        return result;
+      }
+    }
+
+    isSolid(location, ...hMoves) {
+      /// Can a piece pass through this square?
+      let piecesAt = Piece.at(location, ...hMoves);
+      if (piecesAt === null) {
+        return false;
+      }
+      else if (piecesAt instanceof Piece) {
+        return true;
+      }
+      else {
+        // 1 or more quantum pieces... This is tricky.
+        // It also depends on the color of the piece and quantum pieces you pass through
+        return true;
+      }
     }
 
     initPiece() {
@@ -242,17 +218,12 @@ Piece = function() {
       piece.addEventListener('mousedown', function(event) {
         if (!self.alive || turn !== self.color) return;
         if (event.button === LMB) {
-          piece.style['position'] = 'absolute';
-          piece.style['left'] = event.x;
-          piece.style['top'] = event.y;
-          piece.style['transform'] = 'translate(-50%, -50%)';
-          piece.style['z-index'] = 10;
-          heldPiece = self;
+          startDrag(self);
           event.preventDefault();
         }
-        // if (event.button === RMB && this.canQuantum) {
-        //   heldPiece = null;
-        // }
+        if (event.button === RMB && this.canQuantum) {
+          heldPiece = null;
+        }
       });
       piece.addEventListener('mouseenter', function(event) {
         hoveredPiece = self;
@@ -278,7 +249,13 @@ Piece = function() {
     }
 
     isCapOrGuard(other) {
-      return other.color !== this.color? true : PROTECT;
+      if (other instanceof Piece) {
+        return other.color !== this.color? true : PROTECT;
+      }
+      else {
+        // TEMP: quantum entanglement might be weird here...
+        return false;
+      }
     }
 
     moveTo(location, switchTurn) {
@@ -352,7 +329,7 @@ Piece = function() {
         let piece = Piece.at(space.id);
         let legality = this.isLegalMove(space.id);
         if (legality) {
-          if (piece) {
+          if (piece instanceof Piece) {
             space.classList.add('threatened');
             piece.element.classList.add('threatened');
           }
@@ -616,14 +593,136 @@ class Pawn extends Piece {
   }
 }
 
-// const PIECE_CLASSES = {
-//   king: King,
-//   queen: Queen,
-//   bishop: Bishop,
-//   knight: Knight,
-//   rook: Rook,
-//   pawn: Pawn
-// }
+Superstate = function() {
+  let ids = {};
+
+  class QuantumState {
+    constructor(superstate, location, state) {
+      this.id = `${superstate.piece.id}-${state}`;
+      ids[this.id] = this;
+      this.parent = superstate;
+      this.location = location;
+      this.state = state;
+      this.element = null;
+      this.other = null;
+      this.alive = true;
+    }
+
+    get color() {
+      return this.parent.piece.color;
+    }
+
+    isLegalMove(location) {
+      this.parent.piece.location = this.location;
+      return (
+        this.parent.piece.isLegalMove(location)
+        && !(Piece.at(location) instanceof Piece) // Quantum Pieces cannot capture classical pieces
+      );
+    }
+
+    moveTo(location) {
+      this.location = toSpace(location);
+      this.render();
+      // TODO: entanglement
+      // Make other state the only legal move
+    }
+
+    highlightLegalMoves(location) {
+      this.parent.piece.location = this.location;
+      return this.parent.piece.highlightLegalMoves(location);
+    }
+
+    capture(captor) {
+      // TODO: this might actually just entangle stuff...
+      unhighlight(getSpace(this.location));
+      this.location = null;
+      this.element.classList.add('captured')
+      dead[this.color].append(this.element);
+      this.alive = false;
+    }
+
+    render() {
+      let space = document.getElementById(toAlgebraic(this.location));
+      space.append(this.element);
+    }
+  }
+
+  class Superstate {
+    constructor(piece) {
+      this.piece = piece;
+
+      // locations
+      this.states = [
+        new QuantumState(this, piece.location, 'alpha'),
+        new QuantumState(this, piece.location, 'beta')
+      ];
+      this.states[0].other = this.states[1];
+      this.states[1].other = this.states[0];
+
+      this.entanglements = [];
+    }
+
+    get alpha() {
+      return this.states[0];
+    }
+
+    get beta() {
+      return this.states[1];
+    }
+
+    static byId(id) {
+      return ids[id];
+    }
+
+    initPieces() {
+      let self = this;
+      let piece = this.piece;
+      for (let stateObj of this.states) {
+        let state = stateObj.state;
+        let element = document.createElement('div');
+        element.id = `${piece.id}-${state}`;
+        element.classList.add('piece', piece.color, piece.type, 'quantum');
+        let label = document.createElement('div');
+        let intId = parseInt(piece.id.split('-').pop());
+        label.classList.add('quantum', 'label', state, 'pair-' + intId);
+        label.innerHTML = `${intId+1}${STATE_STRINGS[state]}`
+        element.appendChild(label);
+        stateObj.element = element;
+        console.log(stateObj);
+
+        element.addEventListener('mousedown', function(event) {
+          if (event.button === LMB) {
+            startDrag(stateObj);
+            event.preventDefault();
+          }
+        });
+        element.addEventListener('mouseenter', function(event) {
+          hoveredPiece = self;
+          stateObj.highlightLegalMoves();
+        });
+        element.addEventListener('mouseleave', function(event) {
+          if (hoveredPiece === self) {
+            unhighlightBoard();
+          }
+        });
+      }
+    }
+
+    collapse(which) {
+      // TODO
+    }
+
+    render() {
+      if (!this.elements) {
+        this.initPieces();
+      }
+      for (let state of this.states) {
+        state.render();
+      }
+    }
+  }
+  return Superstate;
+}();
 
 function newGame() {
   armies = {
