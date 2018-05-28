@@ -30,7 +30,7 @@ var turn = 'white';
 var quantumMove = null;
 
 // ui elements
-var dead, turnIndicator, exiled;
+var dead, turnIndicator, hidden;
 
 function startDrag(piece) {
   let element = piece.element;
@@ -112,10 +112,25 @@ function isCheckmate(color) {
   else return false;
 }
 
-function setTurn(color) {
-  turn = color;
+function passTurn() {
+  for (let piece of armies[turn]) {
+    if (piece.isQuantum) {
+      if (sameLocation(piece.superstate.alpha.location, piece.superstate.beta.location)) {
+        piece.collapse('alpha');
+      }
+    }
+  }
+  turn = otherColor(turn);
   turnIndicator.className = turn;
   quantumMove = null;
+  if (isInCheck(turn)) {
+    if (isCheckmate(turn)) {
+      window.alert("Checkmate!"); // TEMP
+    }
+    else {
+      window.alert("Check!"); // TEMP
+    }
+  }
 }
 
 Piece = function() {
@@ -138,17 +153,14 @@ Piece = function() {
   class Piece {
     constructor(color, position, type) {
       this.id = nextId(color, type);
-      // this.number = parseInt(this.id.split('-').pop());
       piecesByIds[this.id] = this;
       this.type = type;
       this.color = color;
-      // this.isQuantum = false;
+      this.isQuantum = false;
       this.canQuantum = true;
       this.superstate = null;
-      this.qElements = null;
       this.location = toSpace(position);
       this.element = null;
-      this.qElements = null;
       this.hasMoved = false;
       this.alive = true;
       this.promotedFrom = null;
@@ -217,7 +229,7 @@ Piece = function() {
       let piece = this.element;
       piece.addEventListener('mousedown', function(event) {
         if (!self.alive || turn !== self.color) return;
-        if (event.button === LMB) {
+        if (event.button === LMB && !quantumMove) {
           startDrag(self);
           event.preventDefault();
         }
@@ -245,7 +257,18 @@ Piece = function() {
     split() {
       console.log("Splitting")
       this.superstate = new Superstate(this);
+      this.isQuantum = true;
       this.render();
+    }
+
+    collapse(which) {
+      if (this.isQuantum) {
+        this.location = this.superstate[which].location;
+        this.superstate.collapse(which);
+        this.superstate.hide();
+        this.isQuantum = false;
+        this.render();
+      }
     }
 
     isCapOrGuard(other) {
@@ -270,16 +293,7 @@ Piece = function() {
         this.location = toSpace(location);
         this.hasMoved = true;
         if (switchTurn) {
-          turn = otherColor(this.color);
-          turnIndicator.className = turn;
-          if (isInCheck(turn)) {
-            if (isCheckmate(turn)) {
-              window.alert("Checkmate!"); // TEMP
-            }
-            else {
-              window.alert("Check!"); // TEMP
-            }
-          }
+          passTurn();
         }
         this.render();
       }
@@ -349,8 +363,8 @@ Piece = function() {
     }
 
     render() {
-      if (this.superstate) {
-        exiled.append(this.element);
+      if (this.isQuantum) {
+        hidden.append(this.element);
         this.superstate.render();
       }
       else {
@@ -589,7 +603,7 @@ class Pawn extends Piece {
     promotedPiece.promotedFrom = this;
     promotedPiece.render();
     this.alive = false;
-    exiled.append(this.element);
+    hidden.append(this.element);
   }
 }
 
@@ -621,10 +635,19 @@ Superstate = function() {
     }
 
     moveTo(location) {
+      if (quantumMove & quantumMove !== this) {
+        return;
+      }
       this.location = toSpace(location);
       this.render();
+      // Force quantum moves to happen in pairs.
+      if (quantumMove == null) {
+        quantumMove = this.other;
+      }
+      if (quantumMove === this) {
+        passTurn();
+      }
       // TODO: entanglement
-      // Make other state the only legal move
     }
 
     highlightLegalMoves(location) {
@@ -691,7 +714,9 @@ Superstate = function() {
         console.log(stateObj);
 
         element.addEventListener('mousedown', function(event) {
-          if (event.button === LMB) {
+          if (!stateObj.alive || turn !== stateObj.color) return;
+          console.log(quantumMove);
+          if (event.button === LMB && (!quantumMove || quantumMove === stateObj)) {
             startDrag(stateObj);
             event.preventDefault();
           }
@@ -710,6 +735,12 @@ Superstate = function() {
 
     collapse(which) {
       // TODO
+    }
+
+    hide() {
+      for (let stateObj of this.states) {
+        hidden.append(stateObj.element);
+      }
     }
 
     render() {
@@ -818,7 +849,7 @@ function initialize() {
     black: document.getElementById('dead-black'),
   }
   turnIndicator = document.getElementById('turn-indicator');
-  exiled = document.getElementById('exiled');
+  hidden = document.getElementById('hidden');
 }
 
 document.addEventListener('DOMContentLoaded', function() {
