@@ -38,7 +38,12 @@
   border-width: 0px;
 }
 .board .board-space {
-  vertical-align: top;
+  overflow: hidden;
+  display: flex;
+  flex-direction: row;
+  flex-flow: wrap;
+  justify-content: flex-start;
+  align-items: flex-start;
 }
 .board .board-space.light {
   background-color: #cab17c;
@@ -70,10 +75,9 @@
 .board .board-space.dark.drop {
   background-color: #b49b36 !important;
 }
-.board .board-space.square {
+.board .square {
   width: 80px;
   height: 80px;
-  overflow: hidden;
 }
 .board .board-header {
   font-size: 24px;
@@ -146,14 +150,99 @@
   width: 40px;
   height: 40px;
   margin: 0px;
-  display: inline-block;
-  vertical-align: bottom;
-  line-height: 62.85714286px;
-  text-align: right;
-  font-family: monospace;
-  font-size: 22.85714286px;
-  text-shadow: 0 0 3px #ba160a, 0 0 5px #290502;
-  color: #f44336;
+  display: flex;
+  flex-direction: row-reverse;
+  justify-content: flex-start;
+  align-items: flex-end;
+}
+.quantum.label {
+  width: 20px;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+  font-size: 13px;
+}
+.quantum.label.pair-0.alpha {
+  background-color: #f44336;
+  color: #ffffff;
+}
+.quantum.label.pair-0.beta {
+  background-color: #ea1c0d;
+  color: #ffffff;
+}
+.quantum.label.pair-1.alpha {
+  background-color: #1148bf;
+  color: #ffffff;
+}
+.quantum.label.pair-1.beta {
+  background-color: #0d3690;
+  color: #ffffff;
+}
+.quantum.label.pair-2.alpha {
+  background-color: #ffeb3b;
+  color: #000000;
+}
+.quantum.label.pair-2.beta {
+  background-color: #ffe608;
+  color: #000000;
+}
+.quantum.label.pair-3.alpha {
+  background-color: #4caf50;
+  color: #ffffff;
+}
+.quantum.label.pair-3.beta {
+  background-color: #3d8b40;
+  color: #ffffff;
+}
+.quantum.label.pair-4.alpha {
+  background-color: #ff7300;
+  color: #ffffff;
+}
+.quantum.label.pair-4.beta {
+  background-color: #cc5c00;
+  color: #ffffff;
+}
+.quantum.label.pair-5.alpha {
+  background-color: #9c27b0;
+  color: #ffffff;
+}
+.quantum.label.pair-5.beta {
+  background-color: #771e86;
+  color: #ffffff;
+}
+.quantum.label.pair-6.alpha {
+  background-color: #00bcd4;
+  color: #ffffff;
+}
+.quantum.label.pair-6.beta {
+  background-color: #008fa1;
+  color: #ffffff;
+}
+.quantum.label.pair-7.alpha {
+  background-color: #795548;
+  color: #ffffff;
+}
+.quantum.label.pair-7.beta {
+  background-color: #593f35;
+  color: #ffffff;
+}
+.quantum.label.pair-8.alpha {
+  background-color: #bdbdbd;
+  color: #000000;
+}
+.quantum.label.pair-8.beta {
+  background-color: #a4a4a4;
+  color: #ffffff;
+}
+.quantum.label.pair-9.alpha {
+  background-color: #e91e63;
+  color: #ffffff;
+}
+.quantum.label.pair-9.beta {
+  background-color: #c1134e;
+  color: #ffffff;
 }
 .graveyard {
   border: 1px solid black;

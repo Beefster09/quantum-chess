@@ -10,6 +10,11 @@ const MMB = 1;
 const ALPHA = 0;
 const BETA = 1;
 
+const STATE_STRINGS = {
+  alpha: '\u03b1',
+  beta: '\u03b2',
+}
+
 var hoveredPiece = null;
 var heldPiece = null;
 
@@ -19,6 +24,10 @@ var armies = {
 };
 
 var turn = 'white';
+
+// marks if there is a quantum move in progress and somehow indicates which
+// part of the superstate still needs to be moved.
+var quantumMove = null;
 
 // ui elements
 var dead, turnIndicator, exiled;
@@ -93,6 +102,12 @@ function isCheckmate(color) {
   else return false;
 }
 
+function setTurn(color) {
+  turn = color;
+  turnIndicator.className = turn;
+  quantumMove = null;
+}
+
 class Superstate {
   constructor(piece) {
     this.piece = piece;
@@ -100,6 +115,7 @@ class Superstate {
     // locations
     this.locations = [piece.location, piece.location];
     this.elements = null;
+    this.entanglements = [];
   }
 
   initPieces() {
@@ -111,9 +127,29 @@ class Superstate {
       element.id = `${piece.id}-${state}`;
       element.classList.add('piece', piece.color, piece.type, 'quantum');
       let label = document.createElement('div');
-      label.classList.add('quantum', 'label', state, 'idx' + piece.id.split('-').pop());
+      let intId = parseInt(piece.id.split('-').pop());
+      label.classList.add('quantum', 'label', state, 'pair-' + intId);
+      label.innerHTML = `${intId+1}${STATE_STRINGS[state]}`
       element.appendChild(label);
       this.elements.push(element);
+
+      let self = this;
+      element.addEventListener('mousedown', function() {
+        if (event.button === LMB) {
+          element.style['position'] = 'absolute';
+          element.style['left'] = event.x;
+          element.style['top'] = event.y;
+          element.style['transform'] = 'translate(-50%, -50%)';
+          element.style['z-index'] = 10;
+          heldPiece = { // TEMP: this should be some sort of sub object proxy-thing
+            element: element,
+            isLegalMove: () => false, // TEMP
+            moveTo: () => undefined,
+            highlightLegalMoves: () => undefined,
+          };
+          event.preventDefault();
+        }
+      });
 
       state = 'beta';
     }
@@ -204,7 +240,7 @@ Piece = function() {
       let self = this;
       let piece = this.element;
       piece.addEventListener('mousedown', function(event) {
-        if (!self.alive) return;
+        if (!self.alive || turn !== self.color) return;
         if (event.button === LMB) {
           piece.style['position'] = 'absolute';
           piece.style['left'] = event.x;
@@ -228,7 +264,7 @@ Piece = function() {
         }
       });
       piece.addEventListener('contextmenu', function(event) {
-        if (self.canQuantum) {
+        if (self.alive && turn === self.color && self.canQuantum) {
           self.split();
           event.preventDefault();
         }

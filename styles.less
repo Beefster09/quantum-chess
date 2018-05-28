@@ -51,7 +51,12 @@
   }
 
   .board-space {
-    vertical-align: top;
+    overflow: hidden;
+    display: flex;
+    flex-direction: row;
+    flex-flow: wrap;
+    justify-content: flex-start;
+    align-items: flex-start;
     .mixin--board-space(@base-color) {
       background-color: @base-color;
       .mixin--highlight(@highlight) {
@@ -76,11 +81,11 @@
     &.dark {
       .mixin--board-space(@dark-space);
     }
-    &.square {
-      width: @square-size;
-      height: @square-size;
-      overflow: hidden;
-    }
+  }
+
+  .square {
+    width: @square-size;
+    height: @square-size;
   }
 
   .board-header {
@@ -138,19 +143,50 @@
 
   &.quantum {
     @size: @square-size / 2;
-    @text-size: @square-size / 3.5;
     width: @size;
     height: @size;
     margin: 0px;
-    display: inline-block;
-    vertical-align: bottom;
-    line-height: @size + @text-size;
-    text-align: right;
-    font-family: monospace;
-    font-size: @text-size;
-    text-shadow: 0 0 3px darken(@quantum-label, 20%), 0 0 5px darken(@quantum-label, 50%);
-    color: @quantum-label;
+    display: flex;
+    flex-direction: row-reverse;
+    justify-content: flex-start;
+    align-items: flex-end;
   }
+}
+
+.quantum.label {
+  @size: @square-size / 4;
+  width: @size;
+  border-radius: 50%;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-family: sans-serif;
+  font-size: @size * 0.65;
+
+  .mixin--label-color(@pair-idx; @color) {
+    &.pair-@{pair-idx} {
+      &.alpha {
+        background-color: @color;
+        color: contrast(@color);
+      }
+      &.beta {
+        @dark-color: darken(@color, 10%);
+        background-color: @dark-color;
+        color: contrast(@dark-color);
+      }
+    }
+  }
+
+  .mixin--label-color(0, #f44336);
+  .mixin--label-color(1, #1148bf);
+  .mixin--label-color(2, #ffeb3b);
+  .mixin--label-color(3, #4caf50);
+  .mixin--label-color(4, #ff7300);
+  .mixin--label-color(5, #9c27b0);
+  .mixin--label-color(6, #00bcd4);
+  .mixin--label-color(7, #795548);
+  .mixin--label-color(8, #bdbdbd);
+  .mixin--label-color(9, #e91e63);
 }
 
 .graveyard {

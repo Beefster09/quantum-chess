@@ -13,7 +13,7 @@ for r in range(8, 0, -1):
     print("  <tr>")
     print(f'    <th class="board-header rank">{r}</th>')
     for c in range(8):
-        print(f"""    <td id="{cols[c]}{r}" class="board-space {'dark' if (r+c)%2 else 'light'} square"></td>""")
+        print(f"""    <td><div id="{cols[c]}{r}" class="board-space {'dark' if (r+c)%2 else 'light'} square"></div></td>""")
     print(f'    <th class="board-header rank">{r}</th>')
     print("  </tr>")
 
