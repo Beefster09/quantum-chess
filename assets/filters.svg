@@ -1,8 +1,8 @@
 <svg xmlns="http://www.w3.org/2000/svg" version="1.1">
   <defs>
     <filter id="drop-shadow">
-      <feGaussianBlur in="SourceGraphic" stdDeviation="7" result="shadow" />
-      <feOffset in="shadow" dx="3" dy="4" result="shadow" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="2" result="shadow" />
+      <feOffset in="shadow" dx="0" dy="2" result="shadow" />
       <feColorMatrix in="shadow" mode="matrix" values="0 0 0 0 0  0 0 0 0 0  0 0 0 0 0  0 0 0 0.6 0" result="shadow" />
       <feBlend in="SourceGraphic" in2="shadow" />
     </filter>

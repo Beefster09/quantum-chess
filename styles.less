@@ -112,7 +112,7 @@
     filter: url("assets/filters.svg#blue-glow");
   }
 
-  &.threatened {
+  &.threatened, &.in-check {
     filter: url("assets/filters.svg#red-glow");
   }
 
@@ -192,8 +192,25 @@
 
   &.white {
     background-image: url("assets/pieces.svg#white-king");
+    filter: url("assets/filters.svg#drop-shadow");
+    // This is on both as a workaround for some weird chrome bug
   }
   &.black {
     background-image: url("assets/pieces.svg#black-king");
+    filter: url("assets/filters.svg#drop-shadow");
   }
+}
+
+#right-panel {
+  @side-margin: @square-size / 10;
+  padding-left: @side-margin;
+  padding-right: @side-margin;
+}
+
+.scrollable {
+  overflow-y: scroll;
+}
+
+.invisible * {
+  display: none;
 }

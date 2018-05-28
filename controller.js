@@ -21,7 +21,7 @@ var armies = {
 var turn = 'white';
 
 // ui elements
-var dead, turnIndicator;
+var dead, turnIndicator, exiled;
 
 function unhighlight(space) {
   space.classList.remove('legal-move', 'threatened');
@@ -93,29 +93,81 @@ function isCheckmate(color) {
   else return false;
 }
 
+class Superstate {
+  constructor(piece) {
+    this.piece = piece;
+
+    // locations
+    this.locations = [piece.location, piece.location];
+    this.elements = null;
+  }
+
+  initPieces() {
+    this.elements = [];
+    let state = 'alpha'
+    let piece = this.piece;
+    for (let location of this.locations) {
+      let element = document.createElement('div');
+      element.id = `${piece.id}-${state}`;
+      element.classList.add('piece', piece.color, piece.type, 'quantum');
+      let label = document.createElement('div');
+      label.classList.add('quantum', 'label', state, 'idx' + piece.id.split('-').pop());
+      element.appendChild(label);
+      this.elements.push(element);
+
+      state = 'beta';
+    }
+  }
+
+  collapse(which) {
+    // TODO
+  }
+
+  render() {
+    if (!this.elements) {
+      this.initPieces();
+    }
+    for (let i = 0; i < 2; i++) {
+      let space = document.getElementById(toAlgebraic(this.locations[i]));
+      space.append(this.elements[i]);
+    }
+  }
+}
+
 Piece = function() {
   var nextId = function () {
-    let idx = 0;
-    return function iterator() {
-      idx ++;
-      return `piece-${idx}`
+    let counts = {};
+    return function iterator(color, type) {
+      let slot = `${type}-${color}`;
+      if (counts[slot] === undefined) {
+        counts[slot] = 0;
+        return `${slot}-0`;
+      }
+      else {
+        counts[slot]++;
+        return `${slot}-${counts[slot]}`;
+      }
     }
   }();
   var piecesByIds = {}
 
   class Piece {
-    constructor(color, position) {
-      this.id = nextId();
+    constructor(color, position, type) {
+      this.id = nextId(color, type);
+      // this.number = parseInt(this.id.split('-').pop());
       piecesByIds[this.id] = this;
+      this.type = type;
       this.color = color;
-      this.isQuantum = false;
+      // this.isQuantum = false;
       this.canQuantum = true;
+      this.superstate = null;
+      this.qElements = null;
       this.location = toSpace(position);
-      this.type = null;
       this.element = null;
       this.qElements = null;
       this.hasMoved = false;
       this.alive = true;
+      this.promotedFrom = null;
     }
 
     static byId(id) {
@@ -152,6 +204,7 @@ Piece = function() {
       let self = this;
       let piece = this.element;
       piece.addEventListener('mousedown', function(event) {
+        if (!self.alive) return;
         if (event.button === LMB) {
           piece.style['position'] = 'absolute';
           piece.style['left'] = event.x;
@@ -161,9 +214,9 @@ Piece = function() {
           heldPiece = self;
           event.preventDefault();
         }
-        if (event.button === RMB) {
-          // TODO: split piece
-        }
+        // if (event.button === RMB && this.canQuantum) {
+        //   heldPiece = null;
+        // }
       });
       piece.addEventListener('mouseenter', function(event) {
         hoveredPiece = self;
@@ -175,8 +228,17 @@ Piece = function() {
         }
       });
       piece.addEventListener('contextmenu', function(event) {
-        event.preventDefault();
+        if (self.canQuantum) {
+          self.split();
+          event.preventDefault();
+        }
       });
+    }
+
+    split() {
+      console.log("Splitting")
+      this.superstate = new Superstate(this);
+      this.render();
     }
 
     isCapOrGuard(other) {
@@ -197,16 +259,16 @@ Piece = function() {
         if (switchTurn) {
           turn = otherColor(this.color);
           turnIndicator.className = turn;
+          if (isInCheck(turn)) {
+            if (isCheckmate(turn)) {
+              window.alert("Checkmate!"); // TEMP
+            }
+            else {
+              window.alert("Check!"); // TEMP
+            }
+          }
         }
         this.render();
-        if (isInCheck(turn)) {
-          if (isCheckmate(turn)) {
-            window.alert("Checkmate!"); // TEMP
-          }
-          else {
-            window.alert("Check!"); // TEMP
-          }
-        }
       }
     }
 
@@ -274,7 +336,11 @@ Piece = function() {
     }
 
     render() {
-      if (!this.isQuantum) {
+      if (this.superstate) {
+        exiled.append(this.element);
+        this.superstate.render();
+      }
+      else {
         let space = document.getElementById(toAlgebraic(this.location));
         if (!this.element) {
           this.initPiece();
@@ -344,8 +410,7 @@ function canRideToDiag(piece, [rank, file], ...hMoves) {
 
 class King extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'king';
+    super(color, position, 'king');
     this.canQuantum = false;
   }
 
@@ -385,6 +450,7 @@ class King extends Piece {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
 
+    // Castling
     if (file === curFile + 2) {
       let maybeRook = Piece.at([rank, 7]);
       if (maybeRook && maybeRook.type === 'rook') {
@@ -403,8 +469,7 @@ class King extends Piece {
 
 class Queen extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'queen';
+    super(color, position, 'queen');
   }
 
   canMove(location, ...hMoves) {
@@ -419,8 +484,7 @@ class Queen extends Piece {
 
 class Bishop extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'bishop';
+    super(color, position, 'bishop');
   }
 
   canMove(location, ...hMoves) {
@@ -433,8 +497,7 @@ class Bishop extends Piece {
 
 class Knight extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'knight';
+    super(color, position, 'knight');
   }
 
   canMove(location) {
@@ -457,8 +520,7 @@ class Knight extends Piece {
 
 class Rook extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'rook';
+    super(color, position, 'rook');
   }
 
   canMove(location, ...hMoves) {
@@ -471,8 +533,7 @@ class Rook extends Piece {
 
 class Pawn extends Piece {
   constructor(color, position) {
-    super(color, position);
-    this.type = 'pawn';
+    super(color, position, 'pawn');
     this.canQuantum = false;
   }
 
@@ -490,13 +551,43 @@ class Pawn extends Piece {
     }
     else if (Math.abs(file - curFile) === 1) {
       // TODO: en passant
-      // TODO: promotion
       let other = Piece.at(location);
       return rank === curRank + dir && other && this.isCapOrGuard(other);
     }
     else return false;
   }
+
+  moveTo(location, switchTurn) {
+    super.moveTo(location, switchTurn);
+
+    let [rank, file] = toSpace(location);
+    let lastRank = this.color === 'white'? 7 : 0;
+    if (rank === lastRank) {
+      this.promote(location);
+    }
+  }
+
+  promote(location) {
+    // TODO: allow player to choose promotion piece
+    let promotedPiece = new Queen(this.color, location);
+    let index = armies[this.color].indexOf(this);
+    armies[this.color][index] = promotedPiece;
+    promotedPiece.hasMoved = true;
+    promotedPiece.promotedFrom = this;
+    promotedPiece.render();
+    this.alive = false;
+    exiled.append(this.element);
+  }
 }
+
+// const PIECE_CLASSES = {
+//   king: King,
+//   queen: Queen,
+//   bishop: Bishop,
+//   knight: Knight,
+//   rook: Rook,
+//   pawn: Pawn
+// }
 
 function newGame() {
   armies = {
@@ -523,6 +614,14 @@ function newGame() {
     black: [
       new King(BLACK, 'e8'),
 
+      new Rook(BLACK,   'a8'),
+      new Knight(BLACK, 'b8'),
+      new Bishop(BLACK, 'c8'),
+      new Queen(BLACK,  'd8'),
+      new Bishop(BLACK, 'f8'),
+      new Knight(BLACK, 'g8'),
+      new Rook(BLACK,   'h8'),
+
       new Pawn(BLACK, 'a7'),
       new Pawn(BLACK, 'b7'),
       new Pawn(BLACK, 'c7'),
@@ -531,18 +630,10 @@ function newGame() {
       new Pawn(BLACK, 'f7'),
       new Pawn(BLACK, 'g7'),
       new Pawn(BLACK, 'h7'),
-
-      new Rook(BLACK,   'a8'),
-      new Knight(BLACK, 'b8'),
-      new Bishop(BLACK, 'c8'),
-      new Queen(BLACK,  'd8'),
-      new Bishop(BLACK, 'f8'),
-      new Knight(BLACK, 'g8'),
-      new Rook(BLACK,   'h8'),
     ]
   }
   for(let element of document.getElementsByClassName('board-space')) {
-    element.innerHTML = '';
+    element.innerHTML = ''; // clear content from previous game
   }
   for(let piece of armies.white) {
     piece.render();
@@ -591,7 +682,8 @@ function initialize() {
     white: document.getElementById('dead-white'),
     black: document.getElementById('dead-black'),
   }
-  turnIndicator = document.getElementById('turn-indicator')
+  turnIndicator = document.getElementById('turn-indicator');
+  exiled = document.getElementById('exiled');
 }
 
 document.addEventListener('DOMContentLoaded', function() {

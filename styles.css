@@ -99,7 +99,8 @@
 .piece:hover:not(.captured) {
   filter: url("assets/filters.svg#blue-glow");
 }
-.piece.threatened {
+.piece.threatened,
+.piece.in-check {
   filter: url("assets/filters.svg#red-glow");
 }
 .piece.protected {
@@ -188,7 +189,19 @@
 }
 #turn-indicator.white {
   background-image: url("assets/pieces.svg#white-king");
+  filter: url("assets/filters.svg#drop-shadow");
 }
 #turn-indicator.black {
   background-image: url("assets/pieces.svg#black-king");
+  filter: url("assets/filters.svg#drop-shadow");
+}
+#right-panel {
+  padding-left: 8px;
+  padding-right: 8px;
+}
+.scrollable {
+  overflow-y: scroll;
+}
+.invisible * {
+  display: none;
 }
