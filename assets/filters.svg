@@ -8,19 +8,19 @@
     </filter>
     <filter id="red-glow">
       <feColorMatrix in="SourceGraphic" mode="matrix" values="0.25 0 0 0 0.75  0 0.3 0 0 0.15  0 0 0.25 0 0.025  0 0 0 1 0" result="colorized" />
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glow" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="glow" />
       <feColorMatrix in="glow" mode="matrix" values="0 0 0 0 1.0  0 0 0 0 0.1  0 0 0 0 0.05  0 0 0 0.75 0" result="glow" />
       <feBlend in="colorized" in2="glow" />
     </filter>
     <filter id="blue-glow">
       <feColorMatrix in="SourceGraphic" mode="matrix" values="0.25 0 0 0 0.05  0 0.5 0 0 0.25  0 0 0.25 0 0.75  0 0 0 1 0" result="colorized" />
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glow" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="glow" />
       <feColorMatrix in="glow" mode="matrix" values="0 0 0 0 0  0 0 0 0 0.25  0 0 0 0 1  0 0 0 0.75 0" result="glow" />
       <feBlend in="colorized" in2="glow" />
     </filter>
     <filter id="yellow-glow">
       <feColorMatrix in="SourceGraphic" mode="matrix" values="0.5 0 0 0 0.5  0 0.55 0 0 0.45  0 0 0.25 0 0.05  0 0 0 1 0" result="colorized" />
-      <feGaussianBlur in="SourceGraphic" stdDeviation="5" result="glow" />
+      <feGaussianBlur in="SourceGraphic" stdDeviation="3" result="glow" />
       <feColorMatrix in="glow" mode="matrix" values="0 0 0 0 1.0  0 0 0 0 0.95  0 0 0 0 0.05  0 0 0 0.75 0" result="glow" />
       <feBlend in="colorized" in2="glow" />
     </filter>

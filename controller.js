@@ -123,6 +123,11 @@ function passTurn() {
   turn = otherColor(turn);
   turnIndicator.className = turn;
   quantumMove = null;
+  for (let piece of armies[turn]) {
+    if (piece.type === 'pawn') {
+      piece.justDoubleMoved = false;
+    }
+  }
   if (isInCheck(turn)) {
     if (isCheckmate(turn)) {
       window.alert("Checkmate!"); // TEMP
@@ -562,6 +567,7 @@ class Pawn extends Piece {
   constructor(color, position) {
     super(color, position, 'pawn');
     this.canQuantum = false;
+    this.justDoubleMoved = false;
   }
 
   canMove(location) {
@@ -577,18 +583,38 @@ class Pawn extends Piece {
       return rank === curRank + dir && !Piece.at(location);
     }
     else if (Math.abs(file - curFile) === 1) {
-      // TODO: en passant
-      let other = Piece.at(location);
-      return rank === curRank + dir && other && this.isCapOrGuard(other);
+      if (rank === curRank + dir) {
+        let other = Piece.at(location);
+        if (other instanceof Piece) {
+          return this.isCapOrGuard(other);
+        }
+        else { // Check for en passant capture
+          let maybePawn = Piece.at([curRank, file]);
+          return maybePawn instanceof Pawn && maybePawn.justDoubleMoved;
+        }
+      }
     }
     else return false;
   }
 
   moveTo(location, switchTurn) {
+    let [rank, file] = toSpace(location);
+    let [curRank, curFile] = this.location;
+    if (Math.abs(rank - curRank) == 2) {
+      this.justDoubleMoved = true;
+    }
+    else if (file !== curFile) { // en passant
+      let maybePawn = Piece.at([curRank, file]);
+      if (maybePawn instanceof Pawn && maybePawn.justDoubleMoved) {
+        maybePawn.capture();
+      }
+    }
+
     super.moveTo(location, switchTurn);
 
-    let [rank, file] = toSpace(location);
+    let dir = this.color === 'white'? 1 : -1;
     let lastRank = this.color === 'white'? 7 : 0;
+
     if (rank === lastRank) {
       this.promote(location);
     }
