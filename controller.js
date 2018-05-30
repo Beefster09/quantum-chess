@@ -68,7 +68,7 @@ function getSpaceFromPoint(x, y) {
 function isInCheck(color) {
   let king = armies[color][0];
   for (let piece of armies[otherColor(color)]) {
-    if (piece.alive && piece.canMove(king.location)) {
+    if (piece.alive && piece.canCapture(king.location)) {
       return true;
     }
   }
@@ -79,15 +79,15 @@ function wouldBeCheck(color, pieceToMove, destination) {
   let king = armies[color][0];
   for (let piece of armies[otherColor(color)]) {
     if (piece.alive) {
-      if (sameLocation(piece.location, destination) && pieceToMove.canMove(destination)) {
+      if (sameLocation(piece.location, destination) && pieceToMove.canCapture(destination)) {
         continue; // There might still be another piece keeping you in check
       }
       else if (pieceToMove === king) {
-        if (piece.canMove(destination)) {
+        if (piece.canCapture(destination)) {
           return true;
         }
       }
-      else if (piece.canMove(king.location, [pieceToMove, destination])) {
+      else if (piece.canCapture(king.location, [pieceToMove, destination])) {
         return true;
       }
     }
@@ -345,6 +345,10 @@ Piece = function() {
 
     canMove(location) {
       return false;
+    }
+
+    canCapture(location) {
+      return this.canMove(location);
     }
 
     isLegalMove(location) {
@@ -619,6 +623,13 @@ class Pawn extends Piece {
         if (other instanceof Piece) {
           return this.isCapOrGuard(other);
         }
+        if (other instanceof Array) {
+          for (let qState of other) {
+            if (qState.color !== this.color) {
+              return true;
+            }
+          }
+        }
         else if (other == null) { // Check for en passant capture
           let maybePawn = Piece.at([curRank, file]);
           return maybePawn instanceof Pawn && maybePawn.justDoubleMoved;
@@ -628,16 +639,35 @@ class Pawn extends Piece {
     else return false;
   }
 
+  canCapture(location) {
+    let [rank, file] = toSpace(location);
+    let [curRank, curFile] = this.location;
+
+    let dir = this.color === 'white'? 1 : -1;
+    return Math.abs(file - curFile) === 1 && rank === curRank + dir;
+  }
+
   moveTo(location, switchTurn) {
     let [rank, file] = toSpace(location);
     let [curRank, curFile] = this.location;
     if (Math.abs(rank - curRank) == 2) {
       this.justDoubleMoved = true;
     }
-    else if (file !== curFile) { // en passant
-      let maybePawn = Piece.at([curRank, file]);
-      if (maybePawn instanceof Pawn && maybePawn.justDoubleMoved) {
-        maybePawn.capture();
+    else if (file !== curFile) {
+      // collapse-capture
+      let other = Piece.at(location)
+      if (other instanceof Array) {
+        let qState = other.find(qs => qs.color !== this.color);
+        if (qState) {
+          qState.collapse();
+        }
+      }
+      else {
+        // en passant
+        let maybePawn = Piece.at([curRank, file]);
+        if (maybePawn instanceof Pawn && maybePawn.justDoubleMoved) {
+          maybePawn.capture();
+        }
       }
     }
 
