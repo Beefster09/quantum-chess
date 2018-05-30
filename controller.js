@@ -28,6 +28,10 @@ var requiredMove = null;
 // ui elements
 var dead, turnIndicator, hidden;
 
+function getKing(color) {
+  return armies[color][0];
+}
+
 function startDrag(piece) {
   let element = piece.element;
   element.style['position'] = 'absolute';
@@ -66,7 +70,7 @@ function getSpaceFromPoint(x, y) {
 }
 
 function isInCheck(color) {
-  let king = armies[color][0];
+  let king = getKing(color);
   for (let piece of armies[otherColor(color)]) {
     if (piece.alive && piece.canCapture(king.location)) {
       return true;
@@ -76,7 +80,7 @@ function isInCheck(color) {
 }
 
 function wouldBeCheck(color, pieceToMove, destination) {
-  let king = armies[color][0];
+  let king = getKing(color);
   for (let piece of armies[otherColor(color)]) {
     if (piece.alive) {
       if (sameLocation(piece.location, destination) && pieceToMove.canCapture(destination)) {
@@ -96,7 +100,7 @@ function wouldBeCheck(color, pieceToMove, destination) {
 }
 
 function isCheckmate(color) {
-  let king = armies[color][0];
+  let king = getKing(color);
   if (isInCheck) {
     for (let piece of armies[color]) {
       if (piece.alive && piece.hasLegalMove()) {
@@ -108,12 +112,27 @@ function isCheckmate(color) {
   else return false;
 }
 
+/// Collapsing on putting king on check
+function checkCollapse(superstate, king) {
+  let alphaCheck = superstate.alpha.canCapture(king.location);
+  let betaCheck = superstate.beta.canCapture(king.location);
+  console.log(alphaCheck, betaCheck);
+  if (alphaCheck === betaCheck) return;
+  if (alphaCheck) {
+    superstate.beta.collapse();
+  }
+  else {
+    superstate.alpha.collapse();
+  }
+}
+
 function passTurn() {
   for (let piece of armies[turn]) {
     if (piece.isQuantum) {
       if (sameLocation(piece.superstate.alpha.location, piece.superstate.beta.location)) {
         piece.collapse('alpha');
       }
+      checkCollapse(piece.superstate, getKing(turn));
     }
   }
   turn = otherColor(turn);
@@ -122,6 +141,9 @@ function passTurn() {
   for (let piece of armies[turn]) {
     if (piece.type === 'pawn') {
       piece.justDoubleMoved = false;
+    }
+    if (piece.isQuantum) {
+      checkCollapse(piece.superstate, getKing(turn));
     }
   }
   if (isInCheck(turn)) {
@@ -343,12 +365,12 @@ Piece = function() {
       return straightLine(this.location, location);
     }
 
-    canMove(location) {
+    canMove(location, ...hMoves) {
       return false;
     }
 
-    canCapture(location) {
-      return this.canMove(location);
+    canCapture(location, ...hMoves) {
+      return this.canMove(location, ...hMoves);
     }
 
     isLegalMove(location) {
@@ -440,7 +462,7 @@ function canRideToOrtho(piece, [rank, file], ...hMoves) {
     let diff = Math.abs(rank - curRank);
     for (let offset = 1; offset < diff; offset++) {
       let r = curRank + dir * offset;
-      if (Piece.at([r, file])) return false;
+      if (piece.isSolid([r, file])) return false;
     }
     let other = Piece.at([rank, file], ...hMoves);
     if (other) {
@@ -730,11 +752,16 @@ Superstate = function() {
     }
 
     isLegalMove(location) {
-      this.parent.piece.location = this.location;
+      this.piece.location = this.location;
       return (
-        this.parent.piece.isLegalMove(location)
+        this.piece.isLegalMove(location)
         && !(Piece.at(location) instanceof Piece) // Quantum Pieces cannot capture classical pieces
       );
+    }
+
+    canCapture(location) {
+      this.piece.location = this.location;
+      return this.piece.canCapture(location);
     }
 
     moveTo(location) {
