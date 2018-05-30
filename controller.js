@@ -6,10 +6,6 @@ const LMB = 0;
 const RMB = 2;
 const MMB = 1;
 
-// Quantum states
-const ALPHA = 0;
-const BETA = 1;
-
 const STATE_STRINGS = {
   alpha: '\u03b1',
   beta: '\u03b2',
@@ -27,7 +23,7 @@ var turn = 'white';
 
 // marks if there is a quantum move in progress and somehow indicates which
 // part of the superstate still needs to be moved.
-var quantumMove = null;
+var requiredMove = null;
 
 // ui elements
 var dead, turnIndicator, hidden;
@@ -43,7 +39,7 @@ function startDrag(piece) {
 }
 
 function unhighlight(space) {
-  space.classList.remove('legal-move', 'threatened');
+  space.classList.remove('legal-move', 'threatened', 'path');
   for (let piece of space.children) {
     piece.classList.remove('threatened', 'protected');
   }
@@ -122,7 +118,7 @@ function passTurn() {
   }
   turn = otherColor(turn);
   turnIndicator.className = turn;
-  quantumMove = null;
+  requiredMove = null;
   for (let piece of armies[turn]) {
     if (piece.type === 'pawn') {
       piece.justDoubleMoved = false;
@@ -188,25 +184,27 @@ Piece = function() {
       }
       else if (space.children.length === 1) {
         let piece = Piece.byId(space.firstChild.id);
-        for (let [pieceToMove, destination] of hMoves) {
-          if (piece === pieceToMove) {
-            return null;
-          }
-        }
-        return piece;
-      }
-      else {
-        let result = new Array(...space.children).map(function (child) {
-          let piece = Superstate.byId(child.id);
+        if (piece instanceof Piece) {
           for (let [pieceToMove, destination] of hMoves) {
             if (piece === pieceToMove) {
               return null;
             }
           }
           return piece;
-        }).filter(x => x !== null);
-        return result;
+        }
       }
+      // Drop-thru
+      let result = new Array(...space.children).map(function (child) {
+        let piece = Superstate.byId(child.id);
+        for (let [pieceToMove, destination] of hMoves) {
+          if (piece === pieceToMove) {
+            return null;
+          }
+        }
+        return piece;
+      }).filter(x => x !== null);
+      if (result.length) return result;
+      else return null;
     }
 
     isSolid(location, ...hMoves) {
@@ -218,7 +216,9 @@ Piece = function() {
       else if (piecesAt instanceof Piece) {
         return true;
       }
-      else {
+      else if (piecesAt instanceof Array) {
+        if (piecesAt.length <= 1) return false;
+        if (piecesAt.length >= 4) return true;
         // 1 or more quantum pieces... This is tricky.
         // It also depends on the color of the piece and quantum pieces you pass through
         return true;
@@ -234,7 +234,7 @@ Piece = function() {
       let piece = this.element;
       piece.addEventListener('mousedown', function(event) {
         if (!self.alive || turn !== self.color) return;
-        if (event.button === LMB && !quantumMove) {
+        if (event.button === LMB && (!requiredMove || requiredMove === self)) {
           startDrag(self);
           event.preventDefault();
         }
@@ -261,13 +261,22 @@ Piece = function() {
 
     split() {
       console.log("Splitting")
-      this.superstate = new Superstate(this);
+      this.superstate = new Superstate(this); // TODO: reuse existing superstate when possible
       this.isQuantum = true;
       this.render();
     }
 
     collapse(which) {
       if (this.isQuantum) {
+        if (which === null) {
+          if (sameLocation(this.superstate.alpha.location, this.superstate.beta.location)) {
+            this.location = this.superstate.alpha.location;
+          }
+          else {
+            console.log("Attempt to collapse state to null");
+            return;
+          }
+        }
         this.location = this.superstate[which].location;
         this.superstate.collapse(which);
         this.superstate.hide();
@@ -280,9 +289,10 @@ Piece = function() {
       if (other instanceof Piece) {
         return other.color !== this.color? true : PROTECT;
       }
-      else {
+      else if (other instanceof Array) {
+        return other.length <= 1;
         // TEMP: quantum entanglement might be weird here...
-        return false;
+        // return false;
       }
     }
 
@@ -292,8 +302,24 @@ Piece = function() {
       }
       if (this.color === turn) {
         let other = Piece.at(location);
-        if (other) {
-          other.capture();
+        if (other instanceof Piece) {
+          other.capture(this);
+        }
+        else if (other instanceof Array) {
+          for (let qPiece of other) {
+            qPiece.other.collapse();
+          }
+        }
+        let path = this.pathTo(location);
+        console.log(path);
+        for (let space of path) {
+          let obstacle = Piece.at(space);
+          console.log(obstacle);
+          if (obstacle instanceof Array) {
+            for (let qPiece of obstacle) {
+              qPiece.other.collapse();
+            }
+          }
         }
         this.location = toSpace(location);
         this.hasMoved = true;
@@ -304,12 +330,17 @@ Piece = function() {
       }
     }
 
-    capture() {
+    capture(captor) {
       unhighlight(getSpace(this.location));
       this.location = null;
       this.element.classList.add('captured')
       dead[this.color].append(this.element);
       this.alive = false;
+    }
+
+    /// the spaces on the way to the given location.
+    pathTo(location) {
+      return straightLine(this.location, location);
     }
 
     canMove(location) {
@@ -356,7 +387,7 @@ Piece = function() {
             space.classList.add('legal-move');
           }
         }
-        else if (legality === PROTECT && piece.type !== 'king') {
+        else if (legality === PROTECT && !(piece instanceof King)) {
           if (piece) { // A bit defensive, but whatever
             piece.element.classList.add('protected');
           }
@@ -392,7 +423,7 @@ function canRideToOrtho(piece, [rank, file], ...hMoves) {
     let diff = Math.abs(file - curFile);
     for (let offset = 1; offset < diff; offset++) {
       let f = curFile + dir * offset;
-      if (Piece.at([rank, f], ...hMoves)) return false;
+      if (piece.isSolid([rank, f], ...hMoves)) return false;
     }
     let other = Piece.at([rank, file], ...hMoves);
     if (other) {
@@ -429,7 +460,7 @@ function canRideToDiag(piece, [rank, file], ...hMoves) {
     for (let offset = 1; offset < diff; offset++) {
       let f = curFile + fileDir * offset;
       let r = curRank + rankDir * offset;
-      if (Piece.at([r, f], ...hMoves)) return false;
+      if (piece.isSolid([r, f], ...hMoves)) return false;
     }
     let other = Piece.at([rank, file], ...hMoves);
     if (other) {
@@ -454,14 +485,14 @@ class King extends Piece {
     if (!this.hasMoved && rank === curRank) {
       if (file === curFile + 2 && !isInCheck(this.color) && !wouldBeCheck(this.color, this, [rank, curFile + 1])) {
         let maybeRook = Piece.at([rank, 7]);
-        if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
-          return !Piece.at([rank, 5]) && !Piece.at([rank, 6]);
+        if (maybeRook instanceof Rook && !maybeRook.hasMoved) {
+          return !this.isSolid([rank, 5]) && !this.isSolid([rank, 6]);
         }
       }
       else if (file === curFile - 2 && !isInCheck(this.color) && !wouldBeCheck(this.color, this, [rank, curFile - 1])) {
         let maybeRook = Piece.at([rank, 0]);
-        if (maybeRook && maybeRook.type === 'rook' && !maybeRook.hasMoved) {
-          return !Piece.at([rank, 1]) && !Piece.at([rank, 2]) && !Piece.at([rank, 3]);
+        if (maybeRook instanceof Rook && !maybeRook.hasMoved) {
+          return !this.isSolid([rank, 1]) && !this.isSolid([rank, 2]) && !this.isSolid([rank, 3]);
         }
       }
     }
@@ -485,13 +516,13 @@ class King extends Piece {
     // Castling
     if (file === curFile + 2) {
       let maybeRook = Piece.at([rank, 7]);
-      if (maybeRook && maybeRook.type === 'rook') {
+      if (maybeRook instanceof Rook) {
         maybeRook.moveTo([rank, 5], false);
       }
     }
     else if (file === curFile - 2) {
       let maybeRook = Piece.at([rank, 0]);
-      if (maybeRook && maybeRook.type === 'rook') {
+      if (maybeRook instanceof Rook) {
         maybeRook.moveTo([rank, 3], false);
       }
     }
@@ -578,9 +609,9 @@ class Pawn extends Piece {
 
     if (file === curFile) {
       if (!this.hasMoved && rank === curRank + 2 * dir) {
-        return !Piece.at(location) && !Piece.at([curRank + dir, file]);
+        return !this.isSolid(location) && !this.isSolid([curRank + dir, file]);
       }
-      return rank === curRank + dir && !Piece.at(location);
+      return rank === curRank + dir && !this.isSolid(location);
     }
     else if (Math.abs(file - curFile) === 1) {
       if (rank === curRank + dir) {
@@ -588,7 +619,7 @@ class Pawn extends Piece {
         if (other instanceof Piece) {
           return this.isCapOrGuard(other);
         }
-        else { // Check for en passant capture
+        else if (other == null) { // Check for en passant capture
           let maybePawn = Piece.at([curRank, file]);
           return maybePawn instanceof Pawn && maybePawn.justDoubleMoved;
         }
@@ -633,6 +664,18 @@ class Pawn extends Piece {
   }
 }
 
+const IMPOSSIBLE = 0;
+const NORMAL = 1;
+const LEFTCAPTURED = 2; // "left" term in entanglement captured by right
+const RIGHTCAPTURED = 3;
+
+const ALPHA = 0;
+const BETA = 1;
+const STATE_INDEX = {
+  alpha: ALPHA,
+  beta: BETA
+}
+
 Superstate = function() {
   let ids = {};
 
@@ -652,6 +695,10 @@ Superstate = function() {
       return this.parent.piece.color;
     }
 
+    get piece() {
+      return this.parent.piece;
+    }
+
     isLegalMove(location) {
       this.parent.piece.location = this.location;
       return (
@@ -661,16 +708,16 @@ Superstate = function() {
     }
 
     moveTo(location) {
-      if (quantumMove & quantumMove !== this) {
+      if (requiredMove & requiredMove !== this) {
         return;
       }
       this.location = toSpace(location);
       this.render();
       // Force quantum moves to happen in pairs.
-      if (quantumMove == null) {
-        quantumMove = this.other;
+      if (requiredMove == null) {
+        requiredMove = this.other;
       }
-      if (quantumMove === this) {
+      if (requiredMove === this) {
         passTurn();
       }
       // TODO: entanglement
@@ -685,7 +732,7 @@ Superstate = function() {
       // TODO: this might actually just entangle stuff...
       unhighlight(getSpace(this.location));
       this.location = null;
-      this.element.classList.add('captured')
+      this.element.classList.add('captured');
       dead[this.color].append(this.element);
       this.alive = false;
     }
@@ -693,6 +740,60 @@ Superstate = function() {
     render() {
       let space = document.getElementById(toAlgebraic(this.location));
       space.append(this.element);
+    }
+
+    collapse() {
+      this.piece.collapse(this.state);
+    }
+  }
+
+  class Entanglement {
+    constructor(first, second) {
+      this.first = first;
+      this.second = second;
+      this.table = [
+        [NORMAL, NORMAL],
+        [NORMAL, NORMAL]
+      ]
+      // this.table is in this format:
+      //            | right-alpha | right-beta
+      // left-alpha |   la & ra   |  la & rb
+      // left-beta  |   lb & ra   |  lb & rb
+      // each cell can be:
+      //  - NORMAL: possible, no interference
+      //  - IMPOSSIBLE: this combination of states is impossible
+      //  - LEFTCAPTURED: the left piece is captured when that pair of states is the case
+      //  - RIGHTCAPTURED: the right piece is captured when that pair of states is the case
+    }
+
+    /// determine how an entanglement would collapse
+    /// returns which state should be collapsed in right, or null if no collapse is needed
+    ifLeftCollapses(which) {
+      let [implAlpha, implBeta] = this.table[STATE_INDEX[which]];
+      let possAlpha = implAlpha === NORMAL || implAlpha === RIGHTCAPTURED;
+      let possBeta = implBeta === NORMAL || implBeta === RIGHTCAPTURED;
+      if (possAlpha) {
+        if (possBeta) return null;
+        else return 'alpha'
+      }
+      else {
+        if (possBeta) return 'beta';
+        else return 'impossible';
+      }
+    }
+
+    ifRightCollapses(which) {
+      let [implAlpha, implBeta] = this.table[STATE_INDEX[which]];
+      let possAlpha = implAlpha === NORMAL || implAlpha === LEFTCAPTURED;
+      let possBeta = implBeta === NORMAL || implBeta === LEFTCAPTURED;
+      if (possAlpha) {
+        if (possBeta) return null;
+        else return 'alpha'
+      }
+      else {
+        if (possBeta) return 'beta';
+        else return 'impossible';
+      }
     }
   }
 
@@ -719,6 +820,14 @@ Superstate = function() {
       return this.states[1];
     }
 
+    static get Entanglement() {
+      return Entanglement;
+    }
+
+    static get QuantumState() {
+      return QuantumState;
+    }
+
     static byId(id) {
       return ids[id];
     }
@@ -741,8 +850,7 @@ Superstate = function() {
 
         element.addEventListener('mousedown', function(event) {
           if (!stateObj.alive || turn !== stateObj.color) return;
-          console.log(quantumMove);
-          if (event.button === LMB && (!quantumMove || quantumMove === stateObj)) {
+          if (event.button === LMB && (!requiredMove || requiredMove === stateObj)) {
             startDrag(stateObj);
             event.preventDefault();
           }
@@ -756,11 +864,22 @@ Superstate = function() {
             unhighlightBoard();
           }
         });
+        element.addEventListener('contextmenu', function(event) {
+          if (!requiredMove && turn === piece.color) {
+            stateObj.collapse();
+            requiredMove = piece;
+            event.preventDefault();
+          }
+        })
       }
     }
 
     collapse(which) {
-      // TODO
+      for (let qState of Piece.at(this[which].location)) {
+        if (qState.piece !== this.piece && qState.piece.isQuantum) {
+          qState.other.collapse();
+        }
+      }
     }
 
     hide() {
@@ -858,11 +977,19 @@ function initialize() {
     if (heldPiece) {
       let space = getSpaceFromPoint(event.x, event.y);
       if (space !== lastSpace) {
-        if (space && heldPiece.isLegalMove(space.id)) {
-          space.classList.add('drop');
-        }
         if (lastSpace) {
           lastSpace.classList.remove('drop');
+          for (let pathSpace of straightLine(heldPiece.location, lastSpace.id)) {
+            let spaceElem = document.getElementById(toAlgebraic(pathSpace));
+            spaceElem.classList.remove('path');
+          }
+        }
+        if (space && heldPiece.isLegalMove(space.id)) {
+          space.classList.add('drop');
+          for (let pathSpace of straightLine(heldPiece.location, space.id)) {
+            let spaceElem = document.getElementById(toAlgebraic(pathSpace));
+            spaceElem.classList.add('path');
+          }
         }
       }
       lastSpace = space;

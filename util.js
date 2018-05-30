@@ -44,3 +44,24 @@ function sameLocation(l1, l2) {
   let [r2, f2] = toSpace(l2);
   return r1 === r2 && f1 === f2;
 }
+
+function straightLine(l1, l2) {
+  let [r1, f1] = toSpace(l1);
+  let [r2, f2] = toSpace(l2);
+
+  if (Math.abs(r2 - r1) === Math.abs(f2 - f1) || r1 === r2 || f1 === f2) {
+    let rankDir = Math.sign(r2 - r1);
+    let fileDir = Math.sign(f2 - f1);
+
+    let path = [];
+    let r = r1 + rankDir;
+    let f = f1 + fileDir;
+    while (r != r2 || f != f2) {
+      path.push([r, f]);
+      r += rankDir;
+      f += fileDir;
+    }
+    return path;
+  }
+  else return [];
+}

@@ -1,13 +1,13 @@
 
 
 @move-highlight: #2a7bde;
-@hover-highlight: #8bc34a;
+@path-highlight: #8bc34a;
 @drop-highlight: #ffeb3b;
 @threaten-highlight: #f44336;
 @highlight-alpha: 35%;
 
-@light-space: #cab17c;
-@dark-space: #8c7034;
+@light-space: #caab7c;
+@dark-space: darken(@light-space, 22.5%);
 
 @quantum-label: #f44336;
 
@@ -62,9 +62,6 @@
       .mixin--highlight(@highlight) {
         background-color: mix(@highlight, @base-color, @highlight-alpha);
       }
-      &:hover:empty {
-        .mixin--highlight(@hover-highlight);
-      }
       &.legal-move {
         .mixin--highlight(@move-highlight);
       }
@@ -73,6 +70,9 @@
       }
       &.drop {
         .mixin--highlight(@drop-highlight) !important;
+      }
+      &.path {
+        .mixin--highlight(@path-highlight) !important;
       }
     }
     &.light {
