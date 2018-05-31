@@ -72,8 +72,17 @@ function getSpaceFromPoint(x, y) {
 function isInCheck(color) {
   let king = getKing(color);
   for (let piece of armies[otherColor(color)]) {
-    if (piece.alive && piece.canCapture(king.location)) {
-      return true;
+    if (piece.alive) {
+      if (piece.isQuantum) {
+        let alphaCheck = piece.superstate.alpha.canCapture(king.location);
+        let betaCheck = piece.superstate.beta.canCapture(king.location);
+        if (alphaCheck && betaCheck) {
+          return true;
+        }
+      }
+      else if (piece.canCapture(king.location)) {
+        return true;
+      }
     }
   }
   return false;
@@ -87,12 +96,24 @@ function wouldBeCheck(color, pieceToMove, destination) {
         continue; // There might still be another piece keeping you in check
       }
       else if (pieceToMove === king) {
-        if (piece.canCapture(destination)) {
+        if (piece.isQuantum) {
+          let alphaCheck = piece.superstate.alpha.canCapture(destination);
+          let betaCheck = piece.superstate.beta.canCapture(destination);
+          if (alphaCheck && betaCheck) return true;
+        }
+        else if (piece.canCapture(destination)) {
           return true;
         }
       }
-      else if (piece.canCapture(king.location, [pieceToMove, destination])) {
-        return true;
+      else {
+        if (piece.isQuantum) {
+          let alphaCheck = piece.superstate.alpha.canCapture(king.location, [pieceToMove, destination]);
+          let betaCheck = piece.superstate.beta.canCapture(king.location, [pieceToMove, destination]);
+          if (alphaCheck && betaCheck) return true;
+        }
+        else if (piece.canCapture(king.location, [pieceToMove, destination])) {
+          return true;
+        }
       }
     }
   }
@@ -116,7 +137,7 @@ function isCheckmate(color) {
 function checkCollapse(superstate, king) {
   let alphaCheck = superstate.alpha.canCapture(king.location);
   let betaCheck = superstate.beta.canCapture(king.location);
-  console.log(alphaCheck, betaCheck);
+  console.log(superstate.piece.color, king.color, king.location, superstate.alpha.location, superstate.beta.location, alphaCheck, betaCheck);
   if (alphaCheck === betaCheck) return;
   if (alphaCheck) {
     superstate.beta.collapse();
@@ -130,20 +151,24 @@ function passTurn() {
   for (let piece of armies[turn]) {
     if (piece.isQuantum) {
       if (sameLocation(piece.superstate.alpha.location, piece.superstate.beta.location)) {
-        piece.collapse('alpha');
+        piece.collapse(null);
       }
-      checkCollapse(piece.superstate, getKing(turn));
+      else {
+        console.log("Before switch collapsing");
+        checkCollapse(piece.superstate, getKing(otherColor(turn)));
+      }
     }
   }
   turn = otherColor(turn);
   turnIndicator.className = turn;
   requiredMove = null;
   for (let piece of armies[turn]) {
-    if (piece.type === 'pawn') {
+    if (piece instanceof Pawn) {
       piece.justDoubleMoved = false;
     }
     if (piece.isQuantum) {
-      checkCollapse(piece.superstate, getKing(turn));
+      console.log("After switch collapsing");
+      checkCollapse(piece.superstate, getKing(otherColor(turn)));
     }
   }
   if (isInCheck(turn)) {
@@ -274,7 +299,7 @@ Piece = function() {
         }
       });
       piece.addEventListener('contextmenu', function(event) {
-        if (self.alive && turn === self.color && self.canQuantum) {
+        if (self.alive && turn === self.color && self.canQuantum && !requiredMove) {
           self.split();
           event.preventDefault();
         }
@@ -282,7 +307,6 @@ Piece = function() {
     }
 
     split() {
-      console.log("Splitting")
       this.superstate = new Superstate(this); // TODO: reuse existing superstate when possible
       this.isQuantum = true;
       this.render();
@@ -299,7 +323,9 @@ Piece = function() {
             return;
           }
         }
-        this.location = this.superstate[which].location;
+        else {
+          this.location = this.superstate[which].location;
+        }
         this.superstate.collapse(which);
         this.superstate.hide();
         this.isQuantum = false;
@@ -333,10 +359,8 @@ Piece = function() {
           }
         }
         let path = this.pathTo(location);
-        console.log(path);
         for (let space of path) {
           let obstacle = Piece.at(space);
-          console.log(obstacle);
           if (obstacle instanceof Array) {
             for (let qPiece of obstacle) {
               qPiece.other.collapse();
@@ -345,10 +369,10 @@ Piece = function() {
         }
         this.location = toSpace(location);
         this.hasMoved = true;
+        this.render();
         if (switchTurn) {
           passTurn();
         }
-        this.render();
       }
     }
 
@@ -759,9 +783,9 @@ Superstate = function() {
       );
     }
 
-    canCapture(location) {
+    canCapture(location, ...hMoves) {
       this.piece.location = this.location;
-      return this.piece.canCapture(location);
+      return this.piece.canCapture(location, ...hMoves);
     }
 
     moveTo(location) {
@@ -903,7 +927,6 @@ Superstate = function() {
         label.innerHTML = `${intId+1}${STATE_STRINGS[state]}`
         element.appendChild(label);
         stateObj.element = element;
-        console.log(stateObj);
 
         element.addEventListener('mousedown', function(event) {
           if (!stateObj.alive || turn !== stateObj.color) return;
@@ -932,6 +955,9 @@ Superstate = function() {
     }
 
     collapse(which) {
+      if (which == null) {
+        return;
+      }
       for (let qState of Piece.at(this[which].location)) {
         if (qState.piece !== this.piece && qState.piece.isQuantum) {
           qState.other.collapse();
