@@ -260,6 +260,40 @@
   height: 40px;
   margin: 0;
 }
+@keyframes check-alert {
+  0% {
+    color: rgba(38, 50, 56, 0);
+    background-color: rgba(176, 190, 197, 0);
+    top: 8px;
+  }
+  10%,
+  40% {
+    color: #263238;
+    background-color: #b0bec5;
+    top: 0px;
+  }
+  100% {
+    color: rgba(38, 50, 56, 0);
+    background-color: rgba(176, 190, 197, 0);
+    top: -26.66666667px;
+  }
+}
+.alert-container {
+  position: absolute;
+  display: none;
+}
+.alert {
+  position: relative;
+  display: inline;
+  margin: auto;
+  font-family: sans-serif;
+  font-size: 26.66666667px;
+  border-radius: 8px;
+  animation-name: check-alert;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
+}
 #turn-indicator-container {
   height: 80px;
   align-items: center;

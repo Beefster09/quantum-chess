@@ -34,12 +34,27 @@ function getKing(color) {
 
 function startDrag(piece) {
   let element = piece.element;
-  element.style['position'] = 'absolute';
-  element.style['left'] = event.x;
-  element.style['top'] = event.y;
-  element.style['transform'] = 'translate(-50%, -50%)';
+  element.style.position = 'absolute';
+  element.style.left = event.x;
+  element.style.top = event.y;
+  element.style.transform = 'translate(-50%, -50%)';
   element.style['z-index'] = 10;
   heldPiece = piece;
+}
+
+function checkAlert(king, message) {
+  let kingSpace = document.getElementById(toAlgebraic(king.location));
+  let bb = kingSpace.getBoundingClientRect();
+  let alertContainer = document.getElementById('check-alert-container');
+  let alBB = alertContainer.getBoundingClientRect();
+  kingSpace.after(alertContainer);
+  alertContainer.style.display = 'block';
+  alertContainer.style.position = 'absolute';
+  alertContainer.style.top = bb.top;
+  alertContainer.style.left = ((bb.left + bb.right) / 2);
+  alertContainer.style.transform = 'translate(-50%, -50%)';
+  alertContainer.style['z-index'] = 10;
+  document.getElementById('check-alert').innerHTML = message;
 }
 
 function unhighlight(space) {
@@ -148,6 +163,8 @@ function checkCollapse(superstate, king) {
 }
 
 function passTurn() {
+  let firstKing = getKing(turn);
+  let secondKing = getKing(otherColor(turn));
   for (let piece of armies[turn]) {
     if (piece.isQuantum) {
       if (sameLocation(piece.superstate.alpha.location, piece.superstate.beta.location)) {
@@ -155,7 +172,7 @@ function passTurn() {
       }
       else {
         console.log("Before switch collapsing");
-        checkCollapse(piece.superstate, getKing(otherColor(turn)));
+        checkCollapse(piece.superstate, secondKing);
       }
     }
   }
@@ -168,15 +185,15 @@ function passTurn() {
     }
     if (piece.isQuantum) {
       console.log("After switch collapsing");
-      checkCollapse(piece.superstate, getKing(otherColor(turn)));
+      checkCollapse(piece.superstate, firstKing);
     }
   }
   if (isInCheck(turn)) {
     if (isCheckmate(turn)) {
-      window.alert("Checkmate!"); // TEMP
+      checkAlert(secondKing, "Checkmate!"); // TEMP
     }
     else {
-      window.alert("Check!"); // TEMP
+      checkAlert(secondKing, "Check!"); // TEMP
     }
   }
 }

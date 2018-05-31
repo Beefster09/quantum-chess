@@ -1,4 +1,4 @@
-
+// out: styles.css
 
 @move-highlight: #2a7bde;
 @path-highlight: #8bc34a;
@@ -206,6 +206,47 @@
     height: @size;
     margin: 0;
   }
+}
+
+@check-alert-fg: #263238;
+@check-alert-bg: #b0bec5;
+
+@keyframes check-alert {
+  0% {
+    color: fade(@check-alert-fg, 0%);
+    background-color: fade(@check-alert-bg, 0%);
+    top: @square-size / 10;
+  }
+  10%, 40% {
+    color: @check-alert-fg;
+    background-color: @check-alert-bg;
+    top: 0px;
+  }
+  100% {
+    color: fade(@check-alert-fg, 0%);
+    background-color: fade(@check-alert-bg, 0%);
+    top: -@square-size / 3;
+  }
+}
+
+.alert-container {
+  position: absolute;
+  display: none;
+}
+
+.alert {
+  position: relative;
+  display: inline;
+  margin: auto;
+  font-family: sans-serif;
+  font-size: @square-size / 3;
+  // border: 1px solid @check-alert-fg;
+  border-radius: @square-size / 10;
+
+  animation-name: check-alert;
+  animation-duration: 3s;
+  animation-timing-function: linear;
+  animation-fill-mode: both;
 }
 
 #turn-indicator-container {
