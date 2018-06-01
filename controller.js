@@ -103,6 +103,15 @@ function isInCheck(color) {
   return false;
 }
 
+function canCheck(piece, kingLocation, ...hMoves) {
+  if (piece.isQuantum) {
+    let alphaCheck = piece.superstate.alpha.canCapture(kingLocation, ...hMoves);
+    let betaCheck = piece.superstate.beta.canCapture(kingLocation, ...hMoves);
+    return alphaCheck && betaCheck;
+  }
+  else return piece.canCapture(kingLocation, ...hMoves);
+}
+
 function wouldBeCheck(color, pieceToMove, destination) {
   let king = getKing(color);
   for (let piece of armies[otherColor(color)]) {
@@ -111,22 +120,12 @@ function wouldBeCheck(color, pieceToMove, destination) {
         continue; // There might still be another piece keeping you in check
       }
       else if (pieceToMove === king) {
-        if (piece.isQuantum) {
-          let alphaCheck = piece.superstate.alpha.canCapture(destination);
-          let betaCheck = piece.superstate.beta.canCapture(destination);
-          if (alphaCheck && betaCheck) return true;
-        }
-        else if (piece.canCapture(destination)) {
+        if (canCheck(piece, destination, [pieceToMove, destination])) {
           return true;
         }
       }
       else {
-        if (piece.isQuantum) {
-          let alphaCheck = piece.superstate.alpha.canCapture(king.location, [pieceToMove, destination]);
-          let betaCheck = piece.superstate.beta.canCapture(king.location, [pieceToMove, destination]);
-          if (alphaCheck && betaCheck) return true;
-        }
-        else if (piece.canCapture(king.location, [pieceToMove, destination])) {
+        if (canCheck(piece, king.location, [pieceToMove, destination])) {
           return true;
         }
       }
