@@ -1076,7 +1076,6 @@ function newGame() {
     ]
   }
   gameHistory = [saveState()];
-  console.log(gameHistory);
   renderBoard();
 }
 

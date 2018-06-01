@@ -248,12 +248,13 @@
 .graveyard {
   border: 1px solid black;
   width: 200px;
-  height: 160px;
+  height: 120px;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
   justify-content: flex-start;
   align-items: flex-start;
+  align-content: flex-start;
 }
 .graveyard .piece {
   width: 40px;
