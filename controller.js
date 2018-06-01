@@ -11,19 +11,21 @@ const STATE_STRINGS = {
   beta: '\u03b2',
 }
 
-var hoveredPiece = null;
-var heldPiece = null;
+var hoveredPiece = undefined;
+var heldPiece = undefined;
 
 var armies = {
-  white: null,
-  black: null
+  white: undefined,
+  black: undefined
 };
+var gameHistory = [];
+var turnNumber = 0;
 
 var turn = 'white';
 
 // marks if there is a quantum move in progress and somehow indicates which
 // part of the superstate still needs to be moved.
-var requiredMove = null;
+var requiredMove = undefined;
 
 // ui elements
 var dead, turnIndicator, hidden;
@@ -81,7 +83,7 @@ function getSpaceFromPoint(x, y) {
       return space;
     }
   }
-  return null;
+  return undefined;
 }
 
 function isInCheck(color) {
@@ -167,7 +169,7 @@ function passTurn() {
   for (let piece of armies[turn]) {
     if (piece.isQuantum) {
       if (sameLocation(piece.superstate.alpha.location, piece.superstate.beta.location)) {
-        piece.collapse(null);
+        piece.collapse(undefined);
       }
       else {
         console.log("Before switch collapsing");
@@ -177,7 +179,7 @@ function passTurn() {
   }
   turn = otherColor(turn);
   turnIndicator.className = turn;
-  requiredMove = null;
+  requiredMove = undefined;
   for (let piece of armies[turn]) {
     if (piece instanceof Pawn) {
       piece.justDoubleMoved = false;
@@ -187,6 +189,7 @@ function passTurn() {
       checkCollapse(piece.superstate, firstKing);
     }
   }
+  recordHistory();
   if (isInCheck(turn)) {
     if (isCheckmate(turn)) {
       checkAlert(secondKing, "Checkmate!"); // TEMP
@@ -222,12 +225,12 @@ Piece = function() {
       this.color = color;
       this.isQuantum = false;
       this.canQuantum = true;
-      this.superstate = null;
+      this.superstate = undefined;
       this.location = toSpace(position);
-      this.element = null;
+      this.element = undefined;
       this.hasMoved = false;
       this.alive = true;
-      this.promotedFrom = null;
+      this.promotedFrom = undefined;
     }
 
     static byId(id) {
@@ -243,14 +246,14 @@ Piece = function() {
             return pieceToMove;
           }
         }
-        return null;
+        return undefined;
       }
       else if (space.children.length === 1) {
         let piece = Piece.byId(space.firstChild.id);
         if (piece instanceof Piece) {
           for (let [pieceToMove, destination] of hMoves) {
             if (piece === pieceToMove) {
-              return null;
+              return undefined;
             }
           }
           return piece;
@@ -261,19 +264,19 @@ Piece = function() {
         let piece = Superstate.byId(child.id);
         for (let [pieceToMove, destination] of hMoves) {
           if (piece === pieceToMove) {
-            return null;
+            return undefined;
           }
         }
         return piece;
-      }).filter(x => x !== null);
+      }).filter(x => x !== undefined);
       if (result.length) return result;
-      else return null;
+      else return undefined;
     }
 
     isSolid(location, ...hMoves) {
       /// Can a piece pass through this square?
       let piecesAt = Piece.at(location, ...hMoves);
-      if (piecesAt === null) {
+      if (piecesAt === undefined) {
         return false;
       }
       else if (piecesAt instanceof Piece) {
@@ -302,7 +305,7 @@ Piece = function() {
           event.preventDefault();
         }
         if (event.button === RMB && this.canQuantum) {
-          heldPiece = null;
+          heldPiece = undefined;
         }
       });
       piece.addEventListener('mouseenter', function(event) {
@@ -323,19 +326,24 @@ Piece = function() {
     }
 
     split() {
-      this.superstate = new Superstate(this); // TODO: reuse existing superstate when possible
+      if (this.superstate == undefined) {
+        this.superstate = new Superstate(this);
+      }
+      else {
+        this.superstate.reset();
+      }
       this.isQuantum = true;
       this.render();
     }
 
     collapse(which) {
       if (this.isQuantum) {
-        if (which === null) {
+        if (which === undefined) {
           if (sameLocation(this.superstate.alpha.location, this.superstate.beta.location)) {
             this.location = this.superstate.alpha.location;
           }
           else {
-            console.log("Attempt to collapse state to null");
+            console.log("Attempt to collapse state to undefined");
             return;
           }
         }
@@ -394,7 +402,7 @@ Piece = function() {
 
     capture(captor) {
       unhighlight(getSpace(this.location));
-      this.location = null;
+      this.location = undefined;
       this.element.classList.add('captured')
       dead[this.color].append(this.element);
       this.alive = false;
@@ -474,7 +482,12 @@ Piece = function() {
         if (!this.element) {
           this.initPiece();
         }
-        space.append(this.element);
+        if (this.alive) {
+          space.append(this.element);
+        }
+        else {
+          dead[this.color].append(this.element);
+        }
       }
     }
   }
@@ -692,7 +705,7 @@ class Pawn extends Piece {
             }
           }
         }
-        else if (other == null) { // Check for en passant capture
+        else if (other == undefined) { // Check for en passant capture
           let maybePawn = Piece.at([curRank, file]);
           return maybePawn instanceof Pawn && maybePawn.justDoubleMoved;
         }
@@ -778,8 +791,8 @@ Superstate = function() {
       this.parent = superstate;
       this.location = location;
       this.state = state;
-      this.element = null;
-      this.other = null;
+      this.element = undefined;
+      this.other = undefined;
       this.alive = true;
     }
 
@@ -811,7 +824,7 @@ Superstate = function() {
       this.location = toSpace(location);
       this.render();
       // Force quantum moves to happen in pairs.
-      if (requiredMove == null) {
+      if (requiredMove == undefined) {
         requiredMove = this.other;
       }
       if (requiredMove === this) {
@@ -828,7 +841,7 @@ Superstate = function() {
     capture(captor) {
       // TODO: this might actually just entangle stuff...
       unhighlight(getSpace(this.location));
-      this.location = null;
+      this.location = undefined;
       this.element.classList.add('captured');
       dead[this.color].append(this.element);
       this.alive = false;
@@ -864,13 +877,13 @@ Superstate = function() {
     }
 
     /// determine how an entanglement would collapse
-    /// returns which state should be collapsed in right, or null if no collapse is needed
+    /// returns which state should be collapsed in right, or undefined if no collapse is needed
     ifLeftCollapses(which) {
       let [implAlpha, implBeta] = this.table[STATE_INDEX[which]];
       let possAlpha = implAlpha === NORMAL || implAlpha === RIGHTCAPTURED;
       let possBeta = implBeta === NORMAL || implBeta === RIGHTCAPTURED;
       if (possAlpha) {
-        if (possBeta) return null;
+        if (possBeta) return undefined;
         else return 'alpha'
       }
       else {
@@ -884,7 +897,7 @@ Superstate = function() {
       let possAlpha = implAlpha === NORMAL || implAlpha === LEFTCAPTURED;
       let possBeta = implBeta === NORMAL || implBeta === LEFTCAPTURED;
       if (possAlpha) {
-        if (possBeta) return null;
+        if (possBeta) return undefined;
         else return 'alpha'
       }
       else {
@@ -903,10 +916,17 @@ Superstate = function() {
         new QuantumState(this, piece.location, 'alpha'),
         new QuantumState(this, piece.location, 'beta')
       ];
-      this.states[0].other = this.states[1];
-      this.states[1].other = this.states[0];
+      this.alpha.other = this.beta;
+      this.beta.other = this.alpha;
 
       this.entanglements = [];
+    }
+
+    reset() {
+      for (let stateObj of this.states) {
+        stateObj.location = this.piece.location;
+        stateObj.alive = this.piece.alive;
+      }
     }
 
     get alpha() {
@@ -971,7 +991,7 @@ Superstate = function() {
     }
 
     collapse(which) {
-      if (which == null) {
+      if (which == undefined) {
         return;
       }
       for (let qState of Piece.at(this[which].location)) {
@@ -999,17 +1019,30 @@ Superstate = function() {
   return Superstate;
 }();
 
+function renderBoard() {
+  for(let element of document.getElementsByClassName('board-space')) {
+    element.innerHTML = ''; // clear content from previous game
+  }
+  for(let piece of armies.white) {
+    piece.render();
+  }
+  for(let piece of armies.black) {
+    piece.render();
+  }
+  turnIndicator.className = turn;
+}
+
 function newGame() {
   armies = {
     white: [
       new King(WHITE, 'e1'),
 
-      new Rook(WHITE,   'a1'),
-      new Knight(WHITE, 'b1'),
-      new Bishop(WHITE, 'c1'),
       new Queen(WHITE,  'd1'),
+      new Bishop(WHITE, 'c1'),
       new Bishop(WHITE, 'f1'),
+      new Knight(WHITE, 'b1'),
       new Knight(WHITE, 'g1'),
+      new Rook(WHITE,   'a1'),
       new Rook(WHITE,   'h1'),
 
       new Pawn(WHITE, 'a2'),
@@ -1024,12 +1057,12 @@ function newGame() {
     black: [
       new King(BLACK, 'e8'),
 
-      new Rook(BLACK,   'a8'),
-      new Knight(BLACK, 'b8'),
-      new Bishop(BLACK, 'c8'),
       new Queen(BLACK,  'd8'),
+      new Bishop(BLACK, 'c8'),
       new Bishop(BLACK, 'f8'),
+      new Knight(BLACK, 'b8'),
       new Knight(BLACK, 'g8'),
+      new Rook(BLACK,   'a8'),
       new Rook(BLACK,   'h8'),
 
       new Pawn(BLACK, 'a7'),
@@ -1042,19 +1075,118 @@ function newGame() {
       new Pawn(BLACK, 'h7'),
     ]
   }
-  for(let element of document.getElementsByClassName('board-space')) {
-    element.innerHTML = ''; // clear content from previous game
+  gameHistory = [saveState()];
+  console.log(gameHistory);
+  renderBoard();
+}
+
+function saveState() {
+  let state = {
+    turn: turn
+  };
+  for (let color in armies) {
+    for (let piece of armies[color]) {
+      let loc = undefined;
+      if (piece.alive) {
+        if (piece.isQuantum) {
+          loc = piece.superstate.states.map(qs => toAlgebraic(qs.location));
+        }
+        else {
+          loc = toAlgebraic(piece.location)
+        } // else loc is undefined
+        let basic = {
+          location: loc,
+          hasMoved: piece.hasMoved,
+        };
+        if (piece instanceof Pawn) {
+          basic.justDoubleMoved = piece.justDoubleMoved;
+        }
+        state[piece.id] = basic;
+      }
+      else {
+        state[piece.id] = null;
+      }
+    }
   }
-  for(let piece of armies.white) {
-    piece.render();
+  return state;
+}
+
+function loadState(state) {
+  if (state === undefined) {
+    console.log("Warning: Attempt to loadState from undefined");
+    return;
   }
-  for(let piece of armies.black) {
-    piece.render();
+  if (isString(state)) {
+    state = JSON.parse(state);
   }
+  turn = state.turn;
+  for (let id in state) {
+    if (id == 'turn') continue;
+    let basic = state[id];
+    let piece = Piece.byId(id);
+    if (basic) {
+      piece.alive = true;
+      if (basic.location instanceof Array) {
+        piece.split();
+        piece.superstate.alpha.location = toSpace(basic.location[0]);
+        piece.superstate.beta.location = toSpace(basic.location[1]);
+      }
+      else {
+        piece.isQuantum = false;
+        piece.location = toSpace(basic.location);
+      }
+      piece.hasMoved = basic.hasMoved;
+      if (basic.justDoubleMoved !== undefined) {
+        piece.justDoubleMoved = basic.justDoubleMoved;
+      }
+    }
+    else {
+      piece.alive = false;
+    }
+  }
+  renderBoard();
+}
+
+function recordHistory() {
+  turnNumber++;
+  while (gameHistory.length > turnNumber) {
+    gameHistory.pop();
+  }
+  let curState = saveState();
+  console.log(JSON.stringify(curState));
+  gameHistory.push(curState);
+}
+
+function goToTurn(num) {
+  if (num < 0) {
+    turnNumber = 0;
+  }
+  else if (num >= gameHistory.length) {
+    turnNumber = gameHistory.length - 1;
+  }
+  else {
+    turnNumber = num;
+  }
+
+  loadState(gameHistory[turnNumber]);
+}
+
+function undo(numMoves) {
+  if (numMoves === undefined || numMoves < 1) {
+    numMoves = 1;
+  }
+  goToTurn(turnNumber - numMoves)
+}
+
+function redo(numMoves) {
+  if (numMoves === undefined || numMoves < 1) {
+    numMoves = 1;
+  }
+  goToTurn(turnNumber + numMoves)
 }
 
 function initialize() {
-  let lastSpace = null;
+  let lastSpace = undefined;
   document.addEventListener('mouseup', function(event) {
     if (lastSpace) {
       lastSpace.classList.remove('drop');
@@ -1070,7 +1202,7 @@ function initialize() {
         }
       }
     }
-    heldPiece = null;
+    heldPiece = undefined;
   });
   document.addEventListener('mousemove', function(event) {
     if (heldPiece) {
