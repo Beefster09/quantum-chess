@@ -502,7 +502,7 @@ function canRideToOrtho(piece, [rank, file], ...hMoves) {
     let diff = Math.abs(rank - curRank);
     for (let offset = 1; offset < diff; offset++) {
       let r = curRank + dir * offset;
-      if (piece.isSolid([r, file])) return false;
+      if (piece.isSolid([r, file], ...hMoves)) return false;
     }
     let other = Piece.at([rank, file], ...hMoves);
     if (other) {
