@@ -861,49 +861,19 @@ Superstate = function() {
     constructor(first, second) {
       this.first = first;
       this.second = second;
-      this.table = [
-        [NORMAL, NORMAL],
-        [NORMAL, NORMAL]
-      ]
-      // this.table is in this format:
-      //            | right-alpha | right-beta
-      // left-alpha |   la & ra   |  la & rb
-      // left-beta  |   lb & ra   |  lb & rb
-      // each cell can be:
-      //  - NORMAL: possible, no interference
-      //  - IMPOSSIBLE: this combination of states is impossible
-      //  - LEFTCAPTURED: the left piece is captured when that pair of states is the case
-      //  - RIGHTCAPTURED: the right piece is captured when that pair of states is the case
     }
+  }
 
-    /// determine how an entanglement would collapse
-    /// returns which state should be collapsed in right, or undefined if no collapse is needed
-    ifLeftCollapses(which) {
-      let [implAlpha, implBeta] = this.table[STATE_INDEX[which]];
-      let possAlpha = implAlpha === NORMAL || implAlpha === RIGHTCAPTURED;
-      let possBeta = implBeta === NORMAL || implBeta === RIGHTCAPTURED;
-      if (possAlpha) {
-        if (possBeta) return undefined;
-        else return 'alpha'
-      }
-      else {
-        if (possBeta) return 'beta';
-        else return 'impossible';
-      }
+  class Force extends Entanglement {
+    collapse() {
+      this.second.collapse()
     }
+  };
 
-    ifRightCollapses(which) {
-      let [implAlpha, implBeta] = this.table[STATE_INDEX[which]];
-      let possAlpha = implAlpha === NORMAL || implAlpha === LEFTCAPTURED;
-      let possBeta = implBeta === NORMAL || implBeta === LEFTCAPTURED;
-      if (possAlpha) {
-        if (possBeta) return undefined;
-        else return 'alpha'
-      }
-      else {
-        if (possBeta) return 'beta';
-        else return 'impossible';
-      }
+  class Capture extends Entanglement {
+    collapse() {
+      this.second.collapse()
+      this.second.parent.piece.capture(this.first.parent.piece)
     }
   }
 
@@ -939,6 +909,14 @@ Superstate = function() {
 
     static get Entanglement() {
       return Entanglement;
+    }
+
+    static get Force() {
+      return Force;
+    }
+
+    static get Capture() {
+      return Capture;
     }
 
     static get QuantumState() {

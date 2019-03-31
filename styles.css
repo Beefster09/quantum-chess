@@ -10,21 +10,9 @@
   flex-grow: 1;
 }
 .no-select {
-  -webkit-user-select: none;
-  -khtml-user-drag: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -moz-user-select: -moz-none;
-  -ms-user-select: none;
   user-select: none;
 }
 .board {
-  -webkit-user-select: none;
-  -khtml-user-drag: none;
-  -khtml-user-select: none;
-  -moz-user-select: none;
-  -moz-user-select: -moz-none;
-  -ms-user-select: none;
   user-select: none;
   cursor: default;
   table-layout: fixed;
@@ -76,26 +64,26 @@
   background-color: #928f41 !important;
 }
 .board .square {
-  width: 80px;
-  height: 80px;
+  width: 11.11111111vmin;
+  height: 11.11111111vmin;
 }
 .board .board-header {
-  font-size: 24px;
+  font-size: 3.33333333vmin;
   font-family: sans-serif;
   text-align: center;
 }
 .board .board-header.file {
-  width: 80px;
-  height: 32px;
+  width: 11.11111111vmin;
+  height: 4.44444444vmin;
 }
 .board .board-header.rank {
-  height: 80px;
-  width: 32px;
+  height: 11.11111111vmin;
+  width: 4.44444444vmin;
 }
 .piece {
   position: relative;
-  width: 80px;
-  height: 80px;
+  width: 11.11111111vmin;
+  height: 11.11111111vmin;
   margin: auto;
   background-repeat: no-repeat;
   background-size: cover;
@@ -147,8 +135,8 @@
   background-image: url("assets/pieces.svg#black-pawn");
 }
 .piece.quantum {
-  width: 40px;
-  height: 40px;
+  width: 5.55555556vmin;
+  height: 5.55555556vmin;
   margin: 0px;
   display: flex;
   flex-direction: row-reverse;
@@ -156,14 +144,14 @@
   align-items: flex-end;
 }
 .quantum.label {
-  width: 20px;
-  height: 20px;
+  width: 2.77777778vmin;
+  height: 2.77777778vmin;
   border-radius: 50%;
   display: flex;
   justify-content: center;
   align-items: center;
   font-family: sans-serif;
-  font-size: 13px;
+  font-size: 1.80555556vmin;
 }
 .quantum.label.pair-0.alpha {
   background-color: #f44336;
@@ -247,8 +235,8 @@
 }
 .graveyard {
   border: 1px solid black;
-  width: 200px;
-  height: 120px;
+  width: 27.77777778vmin;
+  height: 16.66666667vmin;
   display: flex;
   flex-direction: row;
   flex-wrap: wrap;
@@ -257,15 +245,15 @@
   align-content: flex-start;
 }
 .graveyard .piece {
-  width: 40px;
-  height: 40px;
+  width: 5.55555556vmin;
+  height: 5.55555556vmin;
   margin: 0;
 }
 @keyframes check-alert {
   0% {
     color: rgba(38, 50, 56, 0);
     background-color: rgba(176, 190, 197, 0);
-    top: 8px;
+    top: 1.11111111vmin;
   }
   10%,
   40% {
@@ -276,7 +264,7 @@
   100% {
     color: rgba(38, 50, 56, 0);
     background-color: rgba(176, 190, 197, 0);
-    top: -26.66666667px;
+    top: -3.7037037vmin;
   }
 }
 .alert-container {
@@ -288,23 +276,23 @@
   display: inline;
   margin: auto;
   font-family: sans-serif;
-  font-size: 26.66666667px;
-  border-radius: 8px;
+  font-size: 3.7037037vmin;
+  border-radius: 1.11111111vmin;
   animation-name: check-alert;
   animation-duration: 3s;
   animation-timing-function: linear;
   animation-fill-mode: both;
 }
 #turn-indicator-container {
-  height: 80px;
+  height: 11.11111111vmin;
   align-items: center;
   justify-content: center;
   font-family: sans-serif;
-  font-size: 16px;
+  font-size: 2.22222222vmin;
 }
 #turn-indicator {
-  width: 56px;
-  height: 56px;
+  width: 7.77777778vmin;
+  height: 7.77777778vmin;
   display: flex;
   justify-content: center;
   align-items: center;
@@ -321,8 +309,8 @@
   filter: url("assets/filters.svg#drop-shadow");
 }
 #right-panel {
-  padding-left: 8px;
-  padding-right: 8px;
+  padding-left: 1.11111111vmin;
+  padding-right: 1.11111111vmin;
 }
 .scrollable {
   overflow-y: scroll;
